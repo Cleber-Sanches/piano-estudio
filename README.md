@@ -39,3 +39,16 @@ React + Vite + TypeScript, Web MIDI API, [@tonejs/midi](https://github.com/Tonej
 ## Publicação
 
 Cada push na `main` publica no GitHub Pages pelo workflow em `.github/workflows/deploy.yml`. Ative em Settings → Pages → Source: **GitHub Actions**.
+
+## App de iPad (MIDI no iPad)
+
+No iPad, nenhum navegador tem Web MIDI, então o teclado só funciona pelo app nativo. O projeto iOS fica em `ios/` (Capacitor) e o MIDI vem do CoreMIDI (`ios/App/App/MidiPlugin.swift`), com suporte a teclado por cabo e por Bluetooth.
+
+Para instalar no seu iPad, precisa de um Mac com Xcode:
+
+```bash
+npm install
+npm run ios        # gera o site, sincroniza com o projeto iOS e abre o Xcode
+```
+
+No Xcode: alvo **App** → **Signing & Capabilities** → **Team**: escolha seu Apple ID. Conecte o iPad no Mac pelo cabo, ative o **Modo de Desenvolvedor** no iPad, escolha o iPad no topo do Xcode e clique em ▶. Com Apple ID gratuito o app vale por 7 dias; depois é só clicar em ▶ de novo.

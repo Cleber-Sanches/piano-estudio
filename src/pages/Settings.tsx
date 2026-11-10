@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { setVolume, startAudio } from '../engine/audio';
-import { input, type MidiDevice } from '../engine/input';
+import { input, isNativeApp, type MidiDevice } from '../engine/input';
 import { exportJson, importJson } from '../lib/progress';
 import { setSettings, useSettings } from '../lib/settings';
 
@@ -14,9 +14,9 @@ export function SettingsPage() {
   useEffect(() => input.on((e) => e.type === 'on' && setLast(`${e.midi} (${e.source === 'midi' ? 'teclado MIDI' : e.source === 'pc' ? 'teclado do PC' : 'tela'})`)), []);
 
   const status = {
-    'sem-suporte': 'Este navegador não tem Web MIDI. Use o Chrome ou o Edge no computador.',
+    'sem-suporte': 'Este navegador não tem Web MIDI. Use o Chrome ou o Edge no computador, ou o app Piano Estúdio no iPad.',
     negado: 'O acesso ao MIDI foi negado. Libere nas permissões do site (ícone ao lado do endereço) e recarregue.',
-    ok: devices.length ? '' : 'Nenhum teclado conectado. Ligue o piano pelo cabo USB e ele aparece aqui.',
+    ok: devices.length ? '' : isNativeApp ? 'Nenhum teclado conectado. Ligue o piano no iPad pelo cabo (adaptador USB) ou pareie por Bluetooth abaixo.' : 'Nenhum teclado conectado. Ligue o piano pelo cabo USB e ele aparece aqui.',
     desconhecido: 'Conectando…',
   }[input.midiStatus];
 
@@ -41,6 +41,7 @@ export function SettingsPage() {
           </select>
         </label>
         {status && <p className="warn">{status}</p>}
+        {isNativeApp && <div className="actions"><button className="btn ghost" onClick={() => input.pairBluetooth()}>Parear teclado Bluetooth</button></div>}
         <p className="muted small">Última nota recebida: <span className="mono">{last || '—'}</span>. Sem teclado, use o teclado do computador: A W S E D F T G Y H U J K (Dó a Dó), Z e X trocam a oitava.</p>
       </section>
 

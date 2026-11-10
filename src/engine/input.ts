@@ -1,4 +1,18 @@
-// Entrada de notas: teclado MIDI (Web MIDI), teclado do computador e cliques na tela.
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+
+// Entrada de notas: teclado MIDI (Web MIDI no navegador, CoreMIDI no app de iPad),
+// teclado do computador e cliques na tela.
+
+interface NativeMidi {
+  start(): Promise<{ devices: MidiDevice[] }>;
+  listDevices(): Promise<{ devices: MidiDevice[] }>;
+  showBluetooth(): Promise<void>;
+  addListener(event: 'note', fn: (e: { type: 'on' | 'off'; midi: number; velocity: number }) => void): Promise<PluginListenerHandle>;
+  addListener(event: 'devices', fn: (e: { devices: MidiDevice[] }) => void): Promise<PluginListenerHandle>;
+}
+
+const NativeMidi = registerPlugin<NativeMidi>('Midi');
+export const isNativeApp = Capacitor.isNativePlatform();
 
 export type NoteListener = (e: { type: 'on' | 'off'; midi: number; velocity: number; source: 'midi' | 'pc' | 'tela' }) => void;
 
@@ -14,6 +28,7 @@ class InputHub {
   private pcOctave = 4;
   private pcDown = new Set<string>();
   midiStatus: 'desconhecido' | 'sem-suporte' | 'negado' | 'ok' = 'desconhecido';
+  private nativeDevices: MidiDevice[] = [];
   selectedId: string | 'todos' = 'todos';
 
   on(fn: NoteListener) {
@@ -30,11 +45,30 @@ class InputHub {
   }
 
   devices(): MidiDevice[] {
+    if (isNativeApp) return this.nativeDevices;
     if (!this.access) return [];
     return [...this.access.inputs.values()].map((i) => ({ id: i.id, name: i.name || 'Teclado MIDI' }));
   }
 
+  /** Abre o pareamento de teclados Bluetooth (só no app de iPad). */
+  async pairBluetooth() {
+    if (isNativeApp) await NativeMidi.showBluetooth();
+  }
+
   async connectMidi() {
+    if (isNativeApp) {
+      try {
+        await NativeMidi.addListener('note', (e) => this.emit(e.type, e.midi, e.velocity, 'midi'));
+        await NativeMidi.addListener('devices', (e) => { this.nativeDevices = e.devices; this.notifyDevices(); });
+        const r = await NativeMidi.start();
+        this.nativeDevices = r.devices;
+        this.midiStatus = 'ok';
+      } catch {
+        this.midiStatus = 'negado';
+      }
+      this.notifyDevices();
+      return;
+    }
     if (!('requestMIDIAccess' in navigator)) {
       this.midiStatus = 'sem-suporte';
       this.notifyDevices();
