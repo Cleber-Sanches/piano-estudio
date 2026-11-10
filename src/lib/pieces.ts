@@ -81,3 +81,62 @@ export function furElise(bpm: number, hands: Hand[]): Song {
   const notes = [...(hands.includes('R') ? line(rh, 'R') : []), ...(hands.includes('L') ? line(lh, 'L') : [])];
   return fixedTempoSong({ title: 'Für Elise, parte A (Beethoven)', bpm, timeSig: [3, 8], key: 'Am', notes });
 }
+
+/** Parabéns pra Você, em 3/4 com anacruse (o compasso 1 do app começa com pausa). */
+export function parabens(bpm: number, hands: Hand[]): Song {
+  const B4 = 71, C5 = 72, D5 = 74, E5 = 76, F5 = 77, G5 = 79;
+  const h = 0.5;
+  const rh: Ev[] = [
+    [0, 2], [G4, h, 1], [G4, h, 1],
+    [A4, 1, 2], [G4, 1, 1], [C5, 1, 4],
+    [B4, 2, 3], [G4, h, 1], [G4, h, 1],
+    [A4, 1, 2], [G4, 1, 1], [D5, 1, 5],
+    [C5, 2, 4], [G4, h, 1], [G4, h, 1],
+    [G5, 1, 5], [E5, 1, 3], [C5, 1, 1],
+    [B4, 1, 2], [A4, 1, 1], [F5, h, 4], [F5, h, 4],
+    [E5, 1, 3], [C5, 1, 1], [D5, 1, 2],
+    [C5, 3, 1],
+  ];
+  const roots = [C3, G2, G2, C3, C3, F2, G2, C3];
+  const lh: Ev[] = [[0, 3], ...roots.map((r) => [r, 3, r === C3 ? 1 : r === F2 ? 4 : 3] as Ev)];
+  const notes = [...(hands.includes('R') ? line(rh, 'R') : []), ...(hands.includes('L') ? line(lh, 'L') : [])];
+  return fixedTempoSong({ title: 'Parabéns pra Você', bpm, timeSig: [3, 4], key: 'C', notes });
+}
+
+/** Cânone em Ré (Pachelbel), arranjo simples: primeiro só acordes, depois a melodia da 1ª entrada. */
+export function canon(bpm: number, hands: Hand[]): Song {
+  const D2 = 38, A2 = 45, B2 = 47, Fs2 = 42, G2b = 43;
+  const Fs4 = 66, B4 = 71, Cs5 = 73, D5 = 74, E5 = 76, Fs5 = 78, A4b = 69, E4b = 64, G4b = 67;
+  const bass = [D2 + 12, A2, B2, Fs2, G2b, D2 + 12, G2b, A2];
+  const chords = [[Fs4, A4b, D5], [E4b, A4b, Cs5], [Fs4, B4, D5], [Fs4, A4b, Cs5], [G4b, B4, D5], [Fs4, A4b, D5], [G4b, B4, D5], [E4b, A4b, Cs5]];
+  const melody = [Fs5, E5, D5, Cs5, B4, A4b, B4, Cs5];
+  const notes: Parameters<typeof fixedTempoSong>[0]['notes'] = [];
+  for (let rep = 0; rep < 3; rep++) {
+    bass.forEach((b, i) => {
+      const beat = (rep * 8 + i) * 2;
+      if (hands.includes('L')) notes.push({ midi: b, beat, beats: 2, hand: 'L' });
+      if (!hands.includes('R')) return;
+      if (rep === 0) chords[i].forEach((m) => notes.push({ midi: m, beat, beats: 2, hand: 'R' }));
+      else notes.push({ midi: melody[i], beat, beats: 2, hand: 'R', finger: [5, 4, 3, 2, 1, 1, 2, 3][i] });
+    });
+  }
+  return fixedTempoSong({ title: 'Cânone em Ré (Pachelbel)', bpm, key: 'D', notes });
+}
+
+export interface BuiltinPiece {
+  id: string;
+  title: string;
+  level: 1 | 2 | 3;
+  bpm: number;
+  why: string;
+  build: (bpm: number, hands: Hand[]) => Song;
+}
+
+export const BUILTIN_PIECES: BuiltinPiece[] = [
+  { id: 'brilha', title: 'Brilha, Brilha, Estrelinha', level: 1, bpm: 100, why: 'Melodia em notas iguais e baixo simples. A primeira peça com as duas mãos.', build: brilhaBrilha },
+  { id: 'parabens', title: 'Parabéns pra Você', level: 1, bpm: 100, why: 'Compasso 3/4 e anacruse. Útil de verdade: você vai tocar em aniversários.', build: parabens },
+  { id: 'ode', title: 'Ode à Alegria (Beethoven)', level: 1, bpm: 100, why: 'Posição fixa de cinco dedos e o primeiro ritmo pontuado.', build: odeAlegria },
+  { id: 'jingle', title: 'Jingle Bells (refrão)', level: 2, bpm: 110, why: 'Melodia com baixo de Dó, Fá e Sol: o campo harmônico na prática.', build: jingleBells },
+  { id: 'canon', title: 'Cânone em Ré (Pachelbel)', level: 2, bpm: 70, why: 'A progressão mais famosa da música, em Ré maior com Fá♯ e Dó♯. Primeiro os acordes, depois a melodia.', build: canon },
+  { id: 'elise', title: 'Für Elise, parte A (Beethoven)', level: 3, bpm: 70, why: 'Semicolcheias, mãos alternadas e acidentes. O desafio clássico do iniciante.', build: furElise },
+];

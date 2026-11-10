@@ -1,5 +1,6 @@
 import { Midi } from '@tonejs/midi';
 import { useEffect, useState } from 'react';
+import { BUILTIN_PIECES } from '../lib/pieces';
 import { deleteSong, getSong, listSongs, newId, putSong, type StoredSong } from '../lib/library';
 import { guessHands, midiTracks, songFromMidi, type Song, type TrackHands, type TrackInfo } from '../lib/song';
 import { noteName } from '../lib/theory';
@@ -32,8 +33,25 @@ export function Songs({ openSong }: { openSong: (id: string) => void }) {
   return (
     <div className="page">
       <section className="card">
+        <h1>Repertório sugerido</h1>
+        <p className="muted">Peças escolhidas para o seu nível, prontas para tocar. Comece pelo nível 1 e use o modo espera com mãos separadas.</p>
+        <div className="song-list">
+          {BUILTIN_PIECES.map((pc) => (
+            <a key={pc.id} className="rep-row" href={'#/peca/' + pc.id}>
+              <span className={'rep-level l' + pc.level}>Nível {pc.level}</span>
+              <span className="rep-main">
+                <b>{pc.title}</b>
+                <span className="muted small">{pc.why}</span>
+              </span>
+              <span className="plan-go" aria-hidden="true">→</span>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section className="card">
         <h1>Suas músicas</h1>
-        <p className="muted">Adicione os arquivos .mid que você usa no Synthesia. Eles ficam guardados neste navegador.</p>
+        <p className="muted">Adicione os arquivos .mid que você usa no Synthesia. Eles ficam guardados neste navegador. Para músicas recentes, use arquivos que você comprou ou baixou de fontes autorizadas.</p>
         <label className="drop" htmlFor="upload"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => { e.preventDefault(); onFiles(e.dataTransfer.files); }}>

@@ -221,3 +221,12 @@ a.lesson { text-decoration: none; }
 .mk-white:active { background: #E2A84B; }
 .mk-black { position: absolute; top: 0; height: 62%; background: #1A1A1F; border: 0; border-radius: 0 0 4px 4px; cursor: pointer; z-index: 1; }
 .mk-black:active { background: #E2A84B; }
+
+.rep-row { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); text-decoration: none; color: var(--ink); }
+.rep-row:first-child { border-top: 0; }
+.rep-row:hover b { color: var(--brass); }
+.rep-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rep-level { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+.rep-level.l1 { color: var(--good); border-color: var(--good); }
+.rep-level.l2 { color: var(--brass); border-color: var(--brass); }
+.rep-level.l3 { color: var(--danger); border-color: var(--danger); }

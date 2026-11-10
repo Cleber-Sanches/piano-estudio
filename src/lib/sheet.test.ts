@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LESSONS } from './lessons';
+import { BUILTIN_PIECES } from './pieces';
 import { buildSheet, splitLen } from './sheet';
 import { fixedTempoSong } from './song';
 
@@ -14,6 +15,14 @@ describe('partitura', () => {
           expect(sum, `${l.id} compasso ${m.index} ${h}`).toBe(M);
         }
       }
+    }
+  });
+
+  it('peças do repertório fecham os compassos', () => {
+    for (const pc of BUILTIN_PIECES) {
+      const song = pc.build(pc.bpm, ['R', 'L']);
+      const M = song.beatsPerMeasure * 4;
+      for (const m of buildSheet(song)) for (const h of ['R', 'L'] as const) expect(m[h].reduce((a, it) => a + it.len, 0), `${pc.id} ${m.index} ${h}`).toBe(M);
     }
   });
 

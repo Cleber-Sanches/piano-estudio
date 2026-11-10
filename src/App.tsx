@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Player } from './components/Player';
 import { input } from './engine/input';
 import { LESSONS, lessonById, MODULES } from './lib/lessons';
+import { BUILTIN_PIECES } from './lib/pieces';
 import type { Song } from './lib/song';
 import { Home } from './pages/Home';
 import { SettingsPage } from './pages/Settings';
@@ -29,7 +30,11 @@ export function App() {
 
   const parts = route.split('/').filter(Boolean);
   const section = parts[0] ?? '';
-  const inPlayer = (section === 'licao' && parts[1]) || (section === 'teste' && parts[1]) || (section === 'musica' && parts[1] && song?.id === parts[1]);
+  const builtin = useMemo(() => {
+    const pc = section === 'peca' ? BUILTIN_PIECES.find((x) => x.id === parts[1]) : undefined;
+    return pc ? { pc, song: pc.build(pc.bpm, ['R', 'L']) } : null;
+  }, [section, parts[1]]); // eslint-disable-line react-hooks/exhaustive-deps
+  const inPlayer = (section === 'peca' && builtin) || (section === 'licao' && parts[1]) || (section === 'teste' && parts[1]) || (section === 'musica' && parts[1] && song?.id === parts[1]);
 
   const testLesson = useMemo(() => {
     const mod = section === 'teste' ? MODULES.find((m) => m.id === parts[1]) : undefined;
@@ -54,6 +59,10 @@ export function App() {
     body = testLesson
       ? <Player key={'teste-' + testLesson.mod.id} kind="teste" id={testLesson.lesson.id} lesson={testLesson.lesson} moduleTest={{ id: testLesson.mod.id, title: testLesson.mod.title }} onExit={() => go('/')} />
       : <p className="page">Teste não encontrado.</p>;
+  } else if (section === 'peca') {
+    body = builtin
+      ? <Player key={'peca-' + builtin.pc.id} kind="musica" id={'peca-' + builtin.pc.id} song={builtin.song} onExit={() => go('/musicas')} />
+      : <p className="page">Peça não encontrada.</p>;
   } else if (section === 'leitura') {
     body = <Suspense fallback={<p className="page muted">Carregando…</p>}><Reading /></Suspense>;
   } else if (section === 'musica' && parts[1]) {
