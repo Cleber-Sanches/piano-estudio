@@ -59,10 +59,14 @@ class InputHub {
     if (isNativeApp) {
       try {
         await NativeMidi.addListener('note', (e) => this.emit(e.type, e.midi, e.velocity, 'midi'));
-        await NativeMidi.addListener('devices', (e) => { this.nativeDevices = e.devices; this.notifyDevices(); });
+        await NativeMidi.addListener('devices', (e) => this.setNativeDevices(e.devices));
         const r = await NativeMidi.start();
-        this.nativeDevices = r.devices;
+        this.setNativeDevices(r.devices);
         this.midiStatus = 'ok';
+        // Detecção automática: procura teclados novos a cada 2 s e ao voltar para o app.
+        const refresh = () => NativeMidi.listDevices().then((d) => this.setNativeDevices(d.devices)).catch(() => {});
+        setInterval(refresh, 2000);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
       } catch {
         this.midiStatus = 'negado';
       }
@@ -89,6 +93,14 @@ class InputHub {
       this.midiStatus = 'negado';
       this.notifyDevices();
     }
+  }
+
+  /** Ignora a "Rede Session" (MIDI por Wi-Fi do iOS), que não é um teclado. */
+  private setNativeDevices(list: MidiDevice[]) {
+    const real = list.filter((d) => !/^(Rede|Network) Session/i.test(d.name));
+    const same = real.length === this.nativeDevices.length && real.every((d, i) => d.id === this.nativeDevices[i]?.id);
+    this.nativeDevices = real;
+    if (!same) this.notifyDevices();
   }
 
   private notifyDevices() {

@@ -27,7 +27,8 @@ public class MidiPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         var status = MIDIClientCreateWithBlock("PianoEstudio" as CFString, &client) { [weak self] notification in
-            guard notification.pointee.messageID == .msgSetupChanged else { return }
+            let id = notification.pointee.messageID
+            guard id == .msgSetupChanged || id == .msgObjectAdded || id == .msgObjectRemoved else { return }
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.connectAll()
@@ -51,7 +52,11 @@ public class MidiPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func listDevices(_ call: CAPPluginCall) {
-        call.resolve(["devices": devices()])
+        // Também reconecta: se um teclado entrou sem aviso do sistema, ele passa a ser ouvido aqui.
+        DispatchQueue.main.async {
+            if self.started { self.connectAll() }
+            call.resolve(["devices": self.devices()])
+        }
     }
 
     /// Abre a tela da Apple para parear teclados MIDI por Bluetooth.
@@ -74,6 +79,14 @@ public class MidiPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Fontes
 
     private func connectAll() {
+        var present = Set<MIDIUniqueID>()
+        for i in 0..<MIDIGetNumberOfSources() {
+            var uid: MIDIUniqueID = 0
+            MIDIObjectGetIntegerProperty(MIDIGetSource(i), kMIDIPropertyUniqueID, &uid)
+            present.insert(uid)
+        }
+        // Esquece fontes que sumiram, para reconectar quando o teclado voltar.
+        connected.formIntersection(present)
         for i in 0..<MIDIGetNumberOfSources() {
             let src = MIDIGetSource(i)
             var uid: MIDIUniqueID = 0
@@ -156,8 +169,16 @@ public class MidiPlugin: CAPPlugin, CAPBridgedPlugin {
 }
 
 /// Registra o plugin de MIDI na ponte do Capacitor.
+/// Também esconde a barra de status (hora, Wi-Fi, bateria) para o app ocupar a tela toda.
 class MainViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(MidiPlugin())
+    }
+
+    override var prefersStatusBarHidden: Bool { true }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        setNeedsStatusBarAppearanceUpdate()
     }
 }

@@ -35,11 +35,12 @@ export function SettingsPage() {
         <h1>Ajustes</h1>
         <h2>Teclado</h2>
         <label htmlFor="device">Entrada MIDI
-          <select id="device" value={s.deviceId} onChange={(e) => { setSettings({ deviceId: e.target.value }); input.selectedId = e.target.value; }}>
+          <select id="device" value={devices.some((d) => d.id === s.deviceId) ? s.deviceId : 'todos'} onChange={(e) => { setSettings({ deviceId: e.target.value }); input.selectedId = e.target.value; }}>
             <option value="todos">Todos os teclados conectados</option>
             {devices.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </label>
+        {devices.length > 0 && <p className="ok small">Piano detectado: <strong>{devices.map((d) => d.name).join(', ')}</strong></p>}
         {status && <p className="warn">{status}</p>}
         {isNativeApp && <div className="actions"><button className="btn ghost" onClick={() => input.pairBluetooth()}>Parear teclado Bluetooth</button></div>}
         <p className="muted small">Última nota recebida: <span className="mono">{last || '—'}</span>. Sem teclado, use o teclado do computador: A W S E D F T G Y H U J K (Dó a Dó), Z e X trocam a oitava.</p>
