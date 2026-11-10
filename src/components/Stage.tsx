@@ -11,6 +11,8 @@ export interface StageView {
   pressed: Map<number, 'certo' | 'errado' | 'livre'>;
   showFingers: boolean;
   showNames: boolean;
+  /** 1 = normal, 0.3 = fracas, 0 = ocultas (só partitura). */
+  fallAlpha: number;
   onKey?: (midi: number, down: boolean) => void;
 }
 
@@ -199,7 +201,7 @@ export const Stage = forwardRef<StageHandle, { song: Song; onKey?: (midi: number
       { let lo = 0, hi = notes.length; const target = t - maxDur.current - 0.5; while (lo < hi) { const mid = (lo + hi) >> 1; if (notes[mid].start < target) lo = mid + 1; else hi = mid; } i0 = lo; }
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      for (let i = i0; i < notes.length; i++) {
+      for (let i = i0; i < notes.length && view.fallAlpha > 0; i++) {
         const n = notes[i];
         if (n.start > tTop) break;
         if (n.start + n.dur < t - 0.2) continue;
@@ -212,7 +214,7 @@ export const Stage = forwardRef<StageHandle, { song: Song; onKey?: (midi: number
         const base = n.hand === 'R' ? COLORS.R : COLORS.L;
         const pad = k.black ? 1 : 2;
         const x = k.x + pad, nw = k.w - pad * 2, nh = Math.max(4, y0 - y1 - 2);
-        ctx.globalAlpha = mine ? 1 : 0.45;
+        ctx.globalAlpha = (mine ? 1 : 0.45) * view.fallAlpha;
         roundRect(ctx, x, y1, nw, nh, 5);
         if (st === 'erro') {
           ctx.fillStyle = 'rgba(229,83,75,0.25)';
@@ -230,7 +232,7 @@ export const Stage = forwardRef<StageHandle, { song: Song; onKey?: (midi: number
           }
         }
         ctx.globalAlpha = 1;
-        if (view.showFingers && n.finger && nw >= 14 && nh >= 16) {
+        if (view.showFingers && view.fallAlpha >= 1 && n.finger && nw >= 14 && nh >= 16) {
           ctx.fillStyle = '#16161a';
           ctx.font = `700 ${Math.min(14, nw * 0.6)}px Inter, system-ui, sans-serif`;
           ctx.fillText(String(n.finger), x + nw / 2, y0 - Math.min(11, nh / 2) - 1);
@@ -249,7 +251,7 @@ export const Stage = forwardRef<StageHandle, { song: Song; onKey?: (midi: number
         if (n.start > t) break;
         if (!p.isMine(n) && n.start + n.dur > t) sounding.set(n.midi, n.hand);
       }
-      const hints = new Set(p.hintKeys());
+      const hints = new Set(view.fallAlpha > 0 ? p.hintKeys() : []);
       const hintHand = new Map<number, 'R' | 'L'>();
       p.currentGroup?.notes.forEach((n) => hintHand.set(n.midi, n.hand));
       const blackH = kbH * 0.62;

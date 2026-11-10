@@ -1,3 +1,4 @@
+import { brilhaBrilha, furElise, jingleBells, odeAlegria } from './pieces';
 import { fixedTempoSong, type Song } from './song';
 import {
   FIVE_FINGER_L, FIVE_FINGER_R, keySignature, scaleFingering, scaleNotes, triad, tonicName,
@@ -17,20 +18,24 @@ export interface Lesson {
   /** Precisão mínima (0–1) no modo tempo para concluir. */
   goalAccuracy: number;
   build: (bpm: number) => Song;
+  /** Peça (música) em vez de exercício. */
+  kind?: 'peca';
 }
 
 export interface Module {
   id: string;
   title: string;
   intro: string;
+  /** Lição usada no teste do módulo (nivelamento). */
+  testId: string;
 }
 
 export const MODULES: Module[] = [
-  { id: 'A', title: 'Posição de cinco dedos', intro: 'Cada dedo em uma tecla, mão relaxada e curvada. Polegar é o dedo 1, mindinho o 5.' },
-  { id: 'B', title: 'Escalas de Dó, Sol e Fá', intro: 'A passagem do polegar por baixo é o movimento que destrava as músicas. Devagar e sem trancos.' },
-  { id: 'C', title: 'Acordes e inversões', intro: 'As tríades e suas inversões são a base de quase toda música pop. Aperte as 3 notas juntas.' },
-  { id: 'D', title: 'Arpejos', intro: 'O acorde tocado nota por nota. Prepara a mão para os acompanhamentos.' },
-  { id: 'E', title: 'Primeira progressão', intro: 'I–V–vi–IV: a sequência de acordes de centenas de músicas. Direita faz os acordes, esquerda o baixo.' },
+  { id: 'A', title: 'Posição de cinco dedos', intro: 'Cada dedo em uma tecla, mão relaxada e curvada. Polegar é o dedo 1, mindinho o 5.', testId: 'a4' },
+  { id: 'B', title: 'Escalas de Dó, Sol e Fá', intro: 'A passagem do polegar por baixo é o movimento que destrava as músicas. Devagar e sem trancos.', testId: 'b7' },
+  { id: 'C', title: 'Acordes e inversões', intro: 'As tríades e suas inversões são a base de quase toda música pop. Aperte as 3 notas juntas.', testId: 'c4' },
+  { id: 'D', title: 'Arpejos', intro: 'O acorde tocado nota por nota. Prepara a mão para os acompanhamentos.', testId: 'd3' },
+  { id: 'E', title: 'Primeira progressão', intro: 'I–V–vi–IV: a sequência de acordes de centenas de músicas. Direita faz os acordes, esquerda o baixo.', testId: 'e2' },
 ];
 
 const handName = (h: Hand[]) => (h.length === 2 ? 'mãos juntas' : h[0] === 'R' ? 'mão direita' : 'mão esquerda');
@@ -135,12 +140,15 @@ const L = (
 const R: Hand[] = ['R'];
 const E: Hand[] = ['L'];
 const J: Hand[] = ['R', 'L'];
+const P = (id: string, module: string, title: string, tip: string, build: (bpm: number, h: Hand[]) => Song, startBpm: number, goalBpm: number): Lesson =>
+  ({ id, module, title, tip, hands: J, build: (bpm) => build(bpm, J), startBpm, goalBpm, goalAccuracy: 0.9, kind: 'peca' });
 
 export const LESSONS: Lesson[] = [
   L('a1', 'A', 'Cinco dedos em Dó — ' + handName(R), 'Polegar no Dó central. Cada dedo fica sobre a sua tecla o tempo todo.', R, fiveFinger(0, R)),
   L('a2', 'A', 'Cinco dedos em Dó — ' + handName(E), 'Mindinho no Dó uma oitava abaixo do central. Pulso solto, sem levantar o cotovelo.', E, fiveFinger(0, E)),
   L('a3', 'A', 'Cinco dedos em Dó — ' + handName(J), 'As duas mãos andam juntas, em espelho de dedos. Escute se as notas saem ao mesmo tempo.', J, fiveFinger(0, J)),
   L('a4', 'A', 'Cinco dedos em Sol — ' + handName(J), 'Mesma forma de mão, começando no Sol.', J, fiveFinger(7, J)),
+  P('pa', 'A', 'Peça: Brilha, Brilha, Estrelinha', 'Sua primeira peça com as duas mãos. Treine a direita sozinha, depois a esquerda, e só então junte.', brilhaBrilha, 60, 84),
 
   L('b1', 'B', 'Escala de Dó — ' + handName(R), 'Depois do dedo 3 no Mi, o polegar passa por baixo para o Fá. Na descida, o 3 passa por cima.', R, scale(0, 'maior', R)),
   L('b2', 'B', 'Escala de Dó — ' + handName(E), 'Subindo: 5-4-3-2-1 e o dedo 3 passa por cima para o Lá.', E, scale(0, 'maior', E)),
@@ -149,11 +157,13 @@ export const LESSONS: Lesson[] = [
   L('b5', 'B', 'Escala de Fá — ' + handName(R), 'Dedilhado diferente: 1-2-3-4 e o polegar passa depois do Si♭.', R, scale(5, 'maior', R)),
   L('b6', 'B', 'Escala de Fá — ' + handName(E), 'Mesmo dedilhado da esquerda em Dó; o Si♭ cai no dedo 4.', E, scale(5, 'maior', E)),
   L('b7', 'B', 'Escala de Dó — ' + handName(J), 'As passagens de polegar das duas mãos não acontecem ao mesmo tempo. Vá bem devagar.', J, scale(0, 'maior', J), 40, 60),
+  P('pb', 'B', 'Peça: Ode à Alegria', 'Melodia de Beethoven na posição de Dó. Atenção à semínima pontuada no fim das frases: segure o Mi um pouco mais.', odeAlegria, 60, 84),
 
   L('c1', 'C', 'Inversões de Dó maior', 'Fundamental, 1ª e 2ª inversão. A mão muda de forma, não de lugar: deslize.', R, inversions(0, 'maior', R)),
   L('c2', 'C', 'Inversões de Lá menor', 'O mesmo movimento num acorde menor.', R, inversions(9, 'menor', R)),
   L('c3', 'C', 'Inversões de Sol maior', 'Acorde de Sol: Sol, Si, Ré.', R, inversions(7, 'maior', R)),
   L('c4', 'C', 'Acordes de Dó com baixo', 'I–IV–V–I–vi–ii–V–I: os acordes do tom de Dó, com o baixo na esquerda.', J, chordsOfKey(0, J), 50, 70),
+  P('pc', 'C', 'Peça: Jingle Bells', 'A esquerda faz o baixo de cada acorde (Dó, Fá, Sol) enquanto a direita canta a melodia. Repare no ritmo pontuado do “Dó. Ré”.', jingleBells, 60, 96),
 
   L('d1', 'D', 'Arpejo de Dó — ' + handName(R), 'Dedos 1-2-3-5. Abra a mão sem esticar demais.', R, arpeggio(0, 'maior', R), 50, 70),
   L('d2', 'D', 'Arpejo de Dó — ' + handName(E), 'Dedos 5-4-2-1.', E, arpeggio(0, 'maior', E), 50, 70),
@@ -161,6 +171,7 @@ export const LESSONS: Lesson[] = [
 
   L('e1', 'E', 'Progressão com baixo', 'Direita: acordes. Esquerda: uma nota longa por compasso. Troque de acorde sem parar o tempo.', J, progression('baixo', J), 60, 72),
   L('e2', 'E', 'Progressão com arpejo na esquerda', 'Esquerda faz 1–5–8–5 enquanto a direita segura o acorde. É o acompanhamento de muitas baladas.', J, progression('arpejo', J), 50, 66),
+  P('pe', 'E', 'Desafio: Für Elise, parte A', 'Semicolcheias em 3/8: comece bem devagar no modo espera. As duas mãos se revezam, quase nunca tocam juntas.', furElise, 30, 50),
 ];
 
 export const lessonById = (id: string) => LESSONS.find((l) => l.id === id);

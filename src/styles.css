@@ -174,6 +174,8 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
 .seg + .seg { margin-left: -7px; }
 .seg.on { background: #2B2518; border-color: #E2A84B; color: #F3D9A4; position: relative; }
 .bpm { min-width: 74px; text-align: center; }
+.ctrl-label { font-size: 13px; color: #A3A2AA; margin-right: 6px; }
+.ctrl-label + .seg { border-radius: 8px 0 0 8px; }
 .status-bar { display: flex; gap: 18px; flex-wrap: wrap; padding: 6px 16px 10px; font-size: 13px; color: #A3A2AA; background: #141418; }
 .status-bar b { color: #EDEBE6; }
 
@@ -184,3 +186,38 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
   .sheet { min-height: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* plano de hoje */
+.plan { display: flex; flex-direction: column; gap: 14px; }
+.plan-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.plan-list li + li { border-top: 1px solid var(--line); }
+.plan-list a { display: grid; grid-template-columns: 26px 1fr auto; gap: 14px; align-items: center; padding: 16px 18px; text-decoration: none; color: var(--ink); }
+.plan-list a:hover { background: var(--bg); }
+.plan-list a:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+.plan-check { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--brass); display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; }
+.plan-list li.done .plan-check { background: var(--good); border-color: var(--good); }
+.plan-list li.done .plan-title { color: var(--muted); }
+.plan-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.plan-title { font-weight: 600; font-size: 16px; }
+.plan-detail { font-size: 14px; color: var(--muted); }
+.plan-go { color: var(--brass); font-weight: 700; }
+.section-title { margin-top: 8px; }
+.module-head { flex-direction: row; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.module-head > div { display: flex; flex-direction: column; gap: 4px; max-width: 560px; }
+a.lesson { text-decoration: none; }
+.lesson.peca .lesson-title::before { content: "♪ "; color: var(--brass); }
+
+/* leitura */
+.reading-card { align-items: stretch; }
+.reading-note { display: flex; justify-content: center; background: #FBFAF6; border-radius: 10px; padding: 8px 0; }
+.reading-note svg { display: block; }
+.reading-msg { text-align: center; font-size: 16px; font-weight: 600; min-height: 1.5em; color: var(--muted); }
+.reading-msg.certo { color: var(--good); }
+.reading-msg.errado { color: var(--danger); }
+.result-stats.light span { color: var(--muted); }
+.result-stats.light b { color: var(--ink); }
+.mini-kb { position: relative; height: 110px; user-select: none; touch-action: none; }
+.mk-white { position: absolute; top: 0; height: 100%; background: #F4F2EC; border: 1px solid #C9C6BD; border-radius: 0 0 6px 6px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 11px; color: #8a6312; cursor: pointer; }
+.mk-white:active { background: #E2A84B; }
+.mk-black { position: absolute; top: 0; height: 62%; background: #1A1A1F; border: 0; border-radius: 0 0 4px 4px; cursor: pointer; z-index: 1; }
+.mk-black:active { background: #E2A84B; }

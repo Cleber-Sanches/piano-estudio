@@ -4,7 +4,11 @@ App de estudo de piano no navegador: notas caindo, modo espera com teclado MIDI,
 
 ## O que tem
 
-- **Trilha da Fase 1:** 20 lições em 5 módulos (cinco dedos, escalas de Dó/Sol/Fá, acordes e inversões, arpejos, progressão I–V–vi–IV), com dedilhado nas notas, metas de BPM e precisão, e liberação da próxima lição.
+- **Plano de hoje:** ao abrir, o app diz o que estudar naquele dia (revisões, leitura, lição nova e sua música), na ordem certa.
+- **Trilha da Fase 1:** 24 itens em 5 módulos (cinco dedos, escalas de Dó/Sol/Fá, acordes e inversões, arpejos, progressão I–V–vi–IV) com peças de domínio público entre eles (Brilha Brilha, Ode à Alegria, Jingle Bells, Für Elise), dedilhado nas notas, metas de BPM e precisão.
+- **Revisão espaçada:** lições concluídas voltam como aquecimento em 1, 3, 7, 14, 30 e 60 dias.
+- **Nivelamento:** cada módulo tem um teste; passou, o módulo inteiro fica marcado como dominado.
+- **Leitura relâmpago:** 7 níveis de reconhecer notas na pauta tocando no piano, e a ponte gradual das notas caindo (normais, fracas, só partitura).
 - **Modo espera:** a música para até você apertar a tecla certa.
 - **Modo tempo:** segue o metrônomo e avalia cada nota (acerto, erro, atraso médio em ms).
 - **Mãos separadas:** você toca uma mão e o app toca a outra.

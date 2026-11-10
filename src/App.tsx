@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Player } from './components/Player';
 import { input } from './engine/input';
-import { LESSONS, lessonById } from './lib/lessons';
+import { LESSONS, lessonById, MODULES } from './lib/lessons';
 import type { Song } from './lib/song';
 import { Home } from './pages/Home';
 import { SettingsPage } from './pages/Settings';
 import { Songs, SongSetup } from './pages/Songs';
+
+const Reading = lazy(() => import('./pages/Reading').then((m) => ({ default: m.Reading })));
 
 function useHash() {
   const [hash, setHash] = useState(() => location.hash.slice(1) || '/');
@@ -27,7 +29,17 @@ export function App() {
 
   const parts = route.split('/').filter(Boolean);
   const section = parts[0] ?? '';
-  const inPlayer = (section === 'licao' && parts[1]) || (section === 'musica' && parts[1] && song?.id === parts[1]);
+  const inPlayer = (section === 'licao' && parts[1]) || (section === 'teste' && parts[1]) || (section === 'musica' && parts[1] && song?.id === parts[1]);
+
+  const testLesson = useMemo(() => {
+    const mod = section === 'teste' ? MODULES.find((m) => m.id === parts[1]) : undefined;
+    const lesson = mod && lessonById(mod.testId);
+    if (!mod || !lesson) return null;
+    return {
+      mod,
+      lesson: { ...lesson, title: `Teste do módulo: ${mod.title}`, tip: `Uma passada no modo tempo a ${lesson.goalBpm} BPM com ${Math.round(lesson.goalAccuracy * 100)}% libera o módulo inteiro. Pode treinar no modo espera antes.` },
+    };
+  }, [section, parts[1]]); // eslint-disable-line react-hooks/exhaustive-deps
 
   let body: React.ReactNode;
   if (section === 'licao' && parts[1]) {
@@ -38,6 +50,12 @@ export function App() {
       const next = LESSONS[i + 1];
       body = <Player key={lesson.id} kind="licao" id={lesson.id} lesson={lesson} onExit={() => go('/')} onNextLesson={next ? () => go('/licao/' + next.id) : undefined} />;
     }
+  } else if (section === 'teste' && parts[1]) {
+    body = testLesson
+      ? <Player key={'teste-' + testLesson.mod.id} kind="teste" id={testLesson.lesson.id} lesson={testLesson.lesson} moduleTest={{ id: testLesson.mod.id, title: testLesson.mod.title }} onExit={() => go('/')} />
+      : <p className="page">Teste não encontrado.</p>;
+  } else if (section === 'leitura') {
+    body = <Suspense fallback={<p className="page muted">Carregando…</p>}><Reading /></Suspense>;
   } else if (section === 'musica' && parts[1]) {
     body = song?.id === parts[1]
       ? <Player key={parts[1]} kind="musica" id={parts[1]} song={song.song} onExit={() => { setSong(null); go('/musicas'); }} />
@@ -47,7 +65,7 @@ export function App() {
   } else if (section === 'ajustes') {
     body = <SettingsPage />;
   } else {
-    body = <Home open={(id) => go('/licao/' + id)} />;
+    body = <Home />;
   }
 
   return (
@@ -60,6 +78,7 @@ export function App() {
           </a>
           <nav>
             <a href="#/" aria-current={section === '' ? 'page' : undefined}>Trilha</a>
+            <a href="#/leitura" aria-current={section === 'leitura' ? 'page' : undefined}>Leitura</a>
             <a href="#/musicas" aria-current={section === 'musicas' ? 'page' : undefined}>Músicas</a>
             <a href="#/ajustes" aria-current={section === 'ajustes' ? 'page' : undefined}>Ajustes</a>
           </nav>

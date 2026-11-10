@@ -13,6 +13,8 @@ export interface Settings {
   showFingers: boolean;
   showNames: boolean;
   showSheet: boolean;
+  /** Ponte para a partitura: notas caindo normais, fracas ou ocultas. */
+  fall: 'normal' | 'fraca' | 'oculta';
 }
 
 const DEFAULTS: Settings = {
@@ -26,6 +28,7 @@ const DEFAULTS: Settings = {
   showFingers: true,
   showNames: true,
   showSheet: true,
+  fall: 'normal',
 };
 
 const KEY = 'piano-estudio:ajustes';

@@ -11,8 +11,10 @@ import type { Hand } from '../lib/theory';
 import { Stage, type StageHandle } from './Stage';
 
 interface Props {
-  kind: 'licao' | 'musica';
+  kind: 'licao' | 'musica' | 'teste';
   id: string;
+  /** Teste de nivelamento: id do módulo que é liberado se passar. */
+  moduleTest?: { id: string; title: string };
   /** Para lições: a lição (BPM ajustável). Para músicas: a música pronta. */
   lesson?: Lesson;
   song?: Song;
@@ -28,15 +30,15 @@ const HAND_OPTS: Array<{ v: Hand[]; label: string }> = [
   { v: ['R', 'L'], label: 'Juntas' },
 ];
 
-export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson }: Props) {
+export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson, moduleTest }: Props) {
   const settings = useSettings();
-  const [bpm, setBpm] = useState(lesson?.startBpm ?? 60);
+  const [bpm, setBpm] = useState(kind === 'teste' && lesson ? lesson.goalBpm : lesson?.startBpm ?? 60);
   const song = useMemo(() => (lesson ? lesson.build(bpm) : songProp!), [lesson, bpm, songProp]);
   const songHands = useMemo(() => {
     const s = new Set(song.notes.map((n) => n.hand));
     return HAND_OPTS.filter((o) => o.v.every((h) => s.has(h)));
   }, [song]);
-  const [mode, setMode] = useState<PracticeMode>('espera');
+  const [mode, setMode] = useState<PracticeMode>(kind === 'teste' ? 'tempo' : 'espera');
   const [hands, setHands] = useState<Hand[]>(lesson?.hands ?? songHands[songHands.length - 1]?.v ?? ['R']);
   const [speed, setSpeed] = useState(kind === 'musica' ? 0.6 : 1);
   const [loopOn, setLoopOn] = useState(false);
@@ -47,7 +49,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson 
   const [measure, setMeasure] = useState(0);
   const [live, setLive] = useState<number | null>(null);
   const [sheetVersion, setSheetVersion] = useState(0);
-  const [result, setResult] = useState<{ r: PassResult; tips: string[]; progress?: LessonProgress } | null>(null);
+  const [result, setResult] = useState<{ r: PassResult; tips: string[]; progress?: LessonProgress; passed: boolean; moduleCleared: boolean } | null>(null);
   const [passes, setPasses] = useState<PassResult[]>([]);
   const [pianoLoad, setPianoLoad] = useState(0);
   const cursorRef = useRef(0);
@@ -78,7 +80,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson 
     (r: PassResult, fromLoop: boolean) => {
       const effBpm = lesson ? bpm : null;
       const tips = coach({ result: r, mode: practice.opts.mode, bpm: effBpm, speed: practice.opts.speed, cleanStreak: cleanStreak.current, goal: lesson ? { bpm: lesson.goalBpm, accuracy: lesson.goalAccuracy } : undefined, inLoop: fromLoop });
-      const progress = recordAttempt(
+      const rec = recordAttempt(
         {
           kind, id, title: lesson?.title ?? song.title, mode: practice.opts.mode, hands: practice.opts.hands,
           bpm: effBpm ?? Math.round(song.bpm * practice.opts.speed), speed: practice.opts.speed,
@@ -87,10 +89,16 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson 
         },
         r,
         lesson ? { bpm: lesson.goalBpm, accuracy: lesson.goalAccuracy } : undefined,
+        moduleTest?.id,
       );
-      return { tips, progress };
+      if (moduleTest) {
+        tips.unshift(rec.moduleCleared
+          ? `Teste aprovado: o módulo “${moduleTest.title}” foi marcado como dominado. As lições dele entram na revisão.`
+          : `Para passar no teste: ${lesson?.goalBpm} BPM com ${Math.round((lesson?.goalAccuracy ?? 0.9) * 100)}% no modo tempo, sem loop. Se não sair, faça as lições do módulo normalmente.`);
+      }
+      return { tips, progress: rec.lesson, passed: rec.passed, moduleCleared: rec.moduleCleared };
     },
-    [bpm, id, kind, lesson, practice, song],
+    [bpm, id, kind, lesson, practice, song, moduleTest],
   );
 
   // eventos do motor
@@ -107,8 +115,8 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson 
       }
       if (e.type === 'fim') {
         setPlaying(false);
-        const { tips, progress } = finish(e.result, false);
-        setResult({ r: e.result, tips, progress: kind === 'licao' ? progress : undefined });
+        const { tips, progress, passed, moduleCleared } = finish(e.result, false);
+        setResult({ r: e.result, tips, progress: kind !== 'musica' ? progress : undefined, passed, moduleCleared });
         setSheetVersion((v) => v + 1);
       }
     });
@@ -169,7 +177,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson 
         }
       }
       const s = settingsRef.current;
-      stage.current?.draw(practice, { pressed: pressed.current, showFingers: s.showFingers, showNames: s.showNames });
+      stage.current?.draw(practice, { pressed: pressed.current, showFingers: s.showFingers, showNames: s.showNames, fallAlpha: s.fall === 'normal' ? 1 : s.fall === 'fraca' ? 0.3 : 0 });
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -237,7 +245,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson 
         </div>
       </div>
 
-      {settings.showSheet && (
+      {(settings.showSheet || settings.fall === 'oculta') && (
         <Suspense fallback={<div className="sheet" />}>
           <Sheet song={song} measure={measure} practice={practice} version={sheetVersion} cursorRef={cursorRef} />
         </Suspense>
@@ -264,7 +272,8 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson 
                 {mode === 'tempo' && <div><b className="mono">{result.r.avgOffsetMs > 0 ? '+' : ''}{Math.round(result.r.avgOffsetMs)} ms</b><span>{result.r.avgOffsetMs >= 0 ? 'atraso médio' : 'adiantado'}</span></div>}
               </div>
               <ul className="tips">{result.tips.map((t) => <li key={t}>{t}</li>)}</ul>
-              {result.progress?.completed && <p className="done-badge">Lição concluída</p>}
+              {result.moduleCleared && <p className="done-badge">Módulo dominado no nivelamento</p>}
+              {!result.moduleCleared && result.passed && <p className="done-badge">{kind === 'teste' ? 'Teste aprovado' : 'Meta batida'}</p>}
               <div className="actions">
                 <button className="btn" onClick={() => { setResult(null); restart(); }}>Tocar de novo</button>
                 {result.r.troubleMeasures[0] != null && result.r.accuracy < 0.95 && (
@@ -276,7 +285,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson 
                 {lesson && mode === 'tempo' && result.r.accuracy >= 0.9 && bpm < lesson.goalBpm && (
                   <button className="btn ghost" onClick={() => { setBpm(Math.min(lesson.goalBpm, bpm + 4)); setResult(null); }}>Subir para {Math.min(lesson.goalBpm, bpm + 4)} BPM</button>
                 )}
-                {result.progress?.completed && onNextLesson && <button className="btn ghost" onClick={onNextLesson}>Próxima lição →</button>}
+                {(result.passed || result.moduleCleared) && onNextLesson && <button className="btn ghost" onClick={onNextLesson}>Próxima lição →</button>}
               </div>
             </div>
           </div>
@@ -333,6 +342,13 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson 
         <div className="ctrl-group">
           <label className="check-inline" htmlFor="metro"><input id="metro" type="checkbox" checked={settings.metronome} onChange={(e) => setSettings({ metronome: e.target.checked })} /> Metrônomo</label>
           <label className="check-inline" htmlFor="partitura"><input id="partitura" type="checkbox" checked={settings.showSheet} onChange={(e) => setSettings({ showSheet: e.target.checked })} /> Partitura</label>
+        </div>
+
+        <div className="ctrl-group" role="radiogroup" aria-label="Notas caindo">
+          <span className="ctrl-label">Notas caindo</span>
+          {([['normal', 'Normais'], ['fraca', 'Fracas'], ['oculta', 'Só partitura']] as const).map(([v, label]) => (
+            <button key={v} role="radio" aria-checked={settings.fall === v} className={'seg' + (settings.fall === v ? ' on' : '')} onClick={() => setSettings({ fall: v })}>{label}</button>
+          ))}
         </div>
       </div>
 
