@@ -55,6 +55,11 @@ export function setSettings(patch: Partial<Settings>) {
   listeners.forEach((l) => l());
 }
 
+export function subscribeSettings(fn: () => void) {
+  listeners.add(fn);
+  return () => { listeners.delete(fn); };
+}
+
 export function useSettings(): Settings {
   return useSyncExternalStore(
     (fn) => {

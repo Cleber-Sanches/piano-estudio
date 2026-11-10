@@ -3,6 +3,7 @@ import UIKit
 import Capacitor
 import CoreMIDI
 import CoreAudioKit
+import UniformTypeIdentifiers
 
 /// Ponte entre o MIDI nativo da Apple (CoreMIDI) e o app web.
 /// Escuta todos os teclados conectados (USB, Bluetooth, rede) e envia as notas para o JavaScript.
@@ -168,11 +169,116 @@ public class MidiPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
+/// Backup em uma pasta escolhida pelo usuário (ex.: iCloud Drive).
+/// O usuário escolhe a pasta uma vez; guardamos um "bookmark" para voltar a ela sem perguntar de novo.
+@objc(CloudBackupPlugin)
+public class CloudBackupPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelegate {
+    public let identifier = "CloudBackupPlugin"
+    public let jsName = "Backup"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "pickFolder", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "status", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "write", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "read", returnType: CAPPluginReturnPromise),
+    ]
+
+    private let bookmarkKey = "piano-estudio.backupFolder"
+    private let fileName = "piano-estudio-backup.json"
+    private var pendingCall: CAPPluginCall?
+
+    private func folderURL() -> URL? {
+        guard let data = UserDefaults.standard.data(forKey: bookmarkKey) else { return nil }
+        var stale = false
+        guard let url = try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale) else { return nil }
+        if stale, url.startAccessingSecurityScopedResource() {
+            if let fresh = try? url.bookmarkData() { UserDefaults.standard.set(fresh, forKey: bookmarkKey) }
+            url.stopAccessingSecurityScopedResource()
+        }
+        return url
+    }
+
+    @objc func pickFolder(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder])
+            picker.delegate = self
+            picker.allowsMultipleSelection = false
+            self.pendingCall = call
+            self.bridge?.viewController?.present(picker, animated: true)
+        }
+    }
+
+    public func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        guard let call = pendingCall else { return }
+        pendingCall = nil
+        guard let url = urls.first else { call.reject("Nenhuma pasta escolhida"); return }
+        let ok = url.startAccessingSecurityScopedResource()
+        defer { if ok { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let data = try url.bookmarkData()
+            UserDefaults.standard.set(data, forKey: bookmarkKey)
+            call.resolve(["name": url.lastPathComponent])
+        } catch {
+            call.reject("Não consegui guardar a pasta: \(error.localizedDescription)")
+        }
+    }
+
+    public func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        pendingCall?.resolve(["cancelled": true])
+        pendingCall = nil
+    }
+
+    @objc func status(_ call: CAPPluginCall) {
+        if let url = folderURL() {
+            call.resolve(["configured": true, "folderName": url.lastPathComponent])
+        } else {
+            call.resolve(["configured": false])
+        }
+    }
+
+    @objc func write(_ call: CAPPluginCall) {
+        guard let text = call.getString("data") else { call.reject("Sem dados"); return }
+        guard let folder = folderURL() else { call.reject("Pasta de backup não escolhida"); return }
+        DispatchQueue.global(qos: .utility).async {
+            let ok = folder.startAccessingSecurityScopedResource()
+            defer { if ok { folder.stopAccessingSecurityScopedResource() } }
+            let target = folder.appendingPathComponent(self.fileName)
+            var coordError: NSError?
+            var writeError: Error?
+            NSFileCoordinator().coordinate(writingItemAt: target, options: .forReplacing, error: &coordError) { url in
+                do { try Data(text.utf8).write(to: url, options: .atomic) } catch { writeError = error }
+            }
+            if let e = coordError ?? (writeError as NSError?) {
+                call.reject("Falha ao salvar backup: \(e.localizedDescription)")
+            } else {
+                call.resolve(["savedAt": ISO8601DateFormatter().string(from: Date())])
+            }
+        }
+    }
+
+    @objc func read(_ call: CAPPluginCall) {
+        guard let folder = folderURL() else { call.reject("Pasta de backup não escolhida"); return }
+        DispatchQueue.global(qos: .utility).async {
+            let ok = folder.startAccessingSecurityScopedResource()
+            defer { if ok { folder.stopAccessingSecurityScopedResource() } }
+            let target = folder.appendingPathComponent(self.fileName)
+            // Se o arquivo ainda está só na nuvem, pede para baixar.
+            try? FileManager.default.startDownloadingUbiquitousItem(at: target)
+            var coordError: NSError?
+            var result: String?
+            NSFileCoordinator().coordinate(readingItemAt: target, options: [], error: &coordError) { url in
+                result = try? String(contentsOf: url, encoding: .utf8)
+            }
+            if let r = result { call.resolve(["data": r]) } else { call.resolve([:]) }
+        }
+    }
+}
+
 /// Registra o plugin de MIDI na ponte do Capacitor.
 /// Também esconde a barra de status (hora, Wi-Fi, bateria) para o app ocupar a tela toda.
 class MainViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(MidiPlugin())
+        bridge?.registerPluginInstance(CloudBackupPlugin())
     }
 
     override var prefersStatusBarHidden: Bool { true }

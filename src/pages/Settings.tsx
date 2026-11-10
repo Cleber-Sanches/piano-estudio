@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { setVolume, startAudio } from '../engine/audio';
 import { input, isNativeApp, type MidiDevice } from '../engine/input';
+import { autoBackupOn, backupStatus, backupSupported, chooseFolder, lastBackupAt, onBackupChange, restoreNow, saveNow } from '../lib/backup';
 import { exportJson, importJson } from '../lib/progress';
 import { setSettings, useSettings } from '../lib/settings';
 
@@ -9,6 +10,45 @@ export function SettingsPage() {
   const [devices, setDevices] = useState<MidiDevice[]>([]);
   const [last, setLast] = useState<string>('');
   const [msg, setMsg] = useState<string | null>(null);
+
+  const [folder, setFolder] = useState<string | null>(null);
+  const [lastBk, setLastBk] = useState<string | null>(lastBackupAt());
+  const [pendingRestore, setPendingRestore] = useState<string | null>(null);
+  const [bkMsg, setBkMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!backupSupported) return;
+    backupStatus().then((r) => setFolder(r.configured ? r.folderName ?? 'pasta escolhida' : null)).catch(() => {});
+    return onBackupChange(() => setLastBk(lastBackupAt()));
+  }, []);
+
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setBkMsg(null);
+    try { await fn(); } catch (e) { setBkMsg(e instanceof Error ? e.message : 'Algo deu errado.'); }
+    setBusy(false);
+  };
+
+  const pick = () => run(async () => {
+    const r = await chooseFolder();
+    if (!r) return;
+    setFolder(r.name);
+    if (r.existing) setPendingRestore(r.existing);
+    else setBkMsg('Pasta escolhida. Backup feito.');
+  });
+
+  const restore = () => run(async () => {
+    if (!(await restoreNow())) setBkMsg('Não achei backup nessa pasta.');
+  });
+
+  const keepLocal = () => run(async () => {
+    await saveNow();
+    setPendingRestore(null);
+    setBkMsg('Backup feito com os dados deste iPad.');
+  });
+
+  const fmt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
   useEffect(() => input.onDevices(setDevices), []);
   useEffect(() => input.on((e) => e.type === 'on' && setLast(`${e.midi} (${e.source === 'midi' ? 'teclado MIDI' : e.source === 'pc' ? 'teclado do PC' : 'tela'})`)), []);
@@ -73,6 +113,31 @@ export function SettingsPage() {
         </label>
         <p className="muted small">Se o resultado sempre diz que você atrasa uns 30–60 ms mesmo tocando junto do metrônomo, aumente a compensação.</p>
       </section>
+
+      {backupSupported && (
+        <section className="card">
+          <h2>Backup no iCloud</h2>
+          <p className="muted small">Escolha uma pasta no iCloud Drive uma vez. O app guarda lá o progresso, os ajustes e as músicas sozinho, depois de cada mudança e quando você sai do app.</p>
+          {folder
+            ? <p className="ok small">Pasta: <strong>{folder}</strong>{lastBk && autoBackupOn() ? <> · último backup {fmt(lastBk)}</> : null}</p>
+            : <p className="warn small">Nenhuma pasta escolhida ainda. Os dados estão só neste iPad.</p>}
+          {pendingRestore && (
+            <div className="warn small">
+              <p>Já existe um backup nessa pasta, de {fmt(pendingRestore)}. O que fazer?</p>
+              <div className="actions">
+                <button className="btn" disabled={busy} onClick={restore}>Restaurar o backup</button>
+                <button className="btn ghost" disabled={busy} onClick={keepLocal}>Substituir pelos dados deste iPad</button>
+              </div>
+            </div>
+          )}
+          <div className="actions">
+            <button className="btn ghost" disabled={busy} onClick={pick}>{folder ? 'Trocar pasta de backup' : 'Escolher pasta de backup'}</button>
+            {folder && !pendingRestore && <button className="btn ghost" disabled={busy} onClick={() => run(async () => { await saveNow(); setBkMsg('Backup feito.'); })}>Salvar agora</button>}
+            {folder && !pendingRestore && <button className="btn ghost" disabled={busy} onClick={restore}>Restaurar do iCloud</button>}
+            {bkMsg && <span className="muted">{bkMsg}</span>}
+          </div>
+        </section>
+      )}
 
       <section className="card">
         <h2>Progresso</h2>

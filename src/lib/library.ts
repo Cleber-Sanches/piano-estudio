@@ -32,8 +32,16 @@ async function tx<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBReq
 
 export const listSongs = () => tx<StoredSong[]>('readonly', (s) => s.getAll() as IDBRequest<StoredSong[]>);
 export const getSong = (id: string) => tx<StoredSong | undefined>('readonly', (s) => s.get(id) as IDBRequest<StoredSong | undefined>);
-export const putSong = (song: StoredSong) => tx('readwrite', (s) => s.put(song));
-export const deleteSong = (id: string) => tx('readwrite', (s) => s.delete(id));
+const listeners = new Set<() => void>();
+/** Avisa quando a biblioteca muda (usado pelo backup automático). */
+export function subscribeLibrary(fn: () => void) {
+  listeners.add(fn);
+  return () => { listeners.delete(fn); };
+}
+const changed = <T,>(r: T) => { listeners.forEach((l) => l()); return r; };
+
+export const putSong = (song: StoredSong) => tx('readwrite', (s) => s.put(song)).then(changed);
+export const deleteSong = (id: string) => tx('readwrite', (s) => s.delete(id)).then(changed);
 
 export function newId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
