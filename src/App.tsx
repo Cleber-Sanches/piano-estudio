@@ -1,0 +1,74 @@
+import { useEffect, useState } from 'react';
+import { Player } from './components/Player';
+import { input } from './engine/input';
+import { LESSONS, lessonById } from './lib/lessons';
+import type { Song } from './lib/song';
+import { Home } from './pages/Home';
+import { SettingsPage } from './pages/Settings';
+import { Songs, SongSetup } from './pages/Songs';
+
+function useHash() {
+  const [hash, setHash] = useState(() => location.hash.slice(1) || '/');
+  useEffect(() => {
+    const f = () => setHash(location.hash.slice(1) || '/');
+    window.addEventListener('hashchange', f);
+    return () => window.removeEventListener('hashchange', f);
+  }, []);
+  return hash;
+}
+
+const go = (path: string) => { location.hash = path; };
+
+export function App() {
+  const route = useHash();
+  const [devices, setDevices] = useState(0);
+  const [song, setSong] = useState<{ id: string; song: Song } | null>(null);
+  useEffect(() => input.onDevices((d) => setDevices(d.length)), []);
+
+  const parts = route.split('/').filter(Boolean);
+  const section = parts[0] ?? '';
+  const inPlayer = (section === 'licao' && parts[1]) || (section === 'musica' && parts[1] && song?.id === parts[1]);
+
+  let body: React.ReactNode;
+  if (section === 'licao' && parts[1]) {
+    const lesson = lessonById(parts[1]);
+    if (!lesson) body = <p className="page">Lição não encontrada.</p>;
+    else {
+      const i = LESSONS.indexOf(lesson);
+      const next = LESSONS[i + 1];
+      body = <Player key={lesson.id} kind="licao" id={lesson.id} lesson={lesson} onExit={() => go('/')} onNextLesson={next ? () => go('/licao/' + next.id) : undefined} />;
+    }
+  } else if (section === 'musica' && parts[1]) {
+    body = song?.id === parts[1]
+      ? <Player key={parts[1]} kind="musica" id={parts[1]} song={song.song} onExit={() => { setSong(null); go('/musicas'); }} />
+      : <SongSetup id={parts[1]} onBack={() => go('/musicas')} onReady={(s) => setSong({ id: parts[1], song: s })} />;
+  } else if (section === 'musicas') {
+    body = <Songs openSong={(id) => { setSong(null); go('/musica/' + id); }} />;
+  } else if (section === 'ajustes') {
+    body = <SettingsPage />;
+  } else {
+    body = <Home open={(id) => go('/licao/' + id)} />;
+  }
+
+  return (
+    <div className={'app' + (inPlayer ? ' app-player' : '')}>
+      {!inPlayer && (
+        <header className="topbar">
+          <a className="brand" href="#/">
+            <span className="brand-keys" aria-hidden="true"><i /><i /><i /></span>
+            Piano Estúdio
+          </a>
+          <nav>
+            <a href="#/" aria-current={section === '' ? 'page' : undefined}>Trilha</a>
+            <a href="#/musicas" aria-current={section === 'musicas' ? 'page' : undefined}>Músicas</a>
+            <a href="#/ajustes" aria-current={section === 'ajustes' ? 'page' : undefined}>Ajustes</a>
+          </nav>
+          <span className={'midi-pill' + (devices ? ' on' : '')} title={devices ? 'Teclado MIDI conectado' : 'Nenhum teclado MIDI'}>
+            {devices ? 'Teclado conectado' : 'Sem teclado'}
+          </span>
+        </header>
+      )}
+      <main>{body}</main>
+    </div>
+  );
+}
