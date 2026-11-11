@@ -8,6 +8,7 @@ import { Home } from './pages/Home';
 import { SettingsPage } from './pages/Settings';
 import { Songs, SongSetup } from './pages/Songs';
 
+const Coach = lazy(() => import('./pages/Coach').then((m) => ({ default: m.Coach })));
 const Reading = lazy(() => import('./pages/Reading').then((m) => ({ default: m.Reading })));
 
 function useHash() {
@@ -71,6 +72,8 @@ export function App() {
       : <SongSetup id={parts[1]} onBack={() => go('/musicas')} onReady={(s) => setSong({ id: parts[1], song: s })} />;
   } else if (section === 'musicas') {
     body = <Songs openSong={(id) => { setSong(null); go('/musica/' + id); }} />;
+  } else if (section === 'coach') {
+    body = <Suspense fallback={<p className="page muted">Carregando…</p>}><Coach /></Suspense>;
   } else if (section === 'ajustes') {
     body = <SettingsPage />;
   } else {
@@ -89,6 +92,7 @@ export function App() {
             <a href="#/" aria-current={section === '' ? 'page' : undefined}>Trilha</a>
             <a href="#/leitura" aria-current={section === 'leitura' ? 'page' : undefined}>Leitura</a>
             <a href="#/musicas" aria-current={section === 'musicas' ? 'page' : undefined}>Músicas</a>
+            <a href="#/coach" aria-current={section === 'coach' ? 'page' : undefined}>Coach</a>
             <a href="#/ajustes" aria-current={section === 'ajustes' ? 'page' : undefined}>Ajustes</a>
           </nav>
           <span className={'midi-pill' + (devices ? ' on' : '')} title={devices ? 'Teclado MIDI conectado' : 'Nenhum teclado MIDI'}>

@@ -23,6 +23,7 @@
     "vitest": "^5.1.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
     "@capacitor/core": "^8.6.0",
     "@tonejs/midi": "^2.0.28",
     "react": "^19.3.1",

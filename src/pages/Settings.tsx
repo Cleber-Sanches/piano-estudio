@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { setVolume, startAudio } from '../engine/audio';
 import { input, isNativeApp, type MidiDevice } from '../engine/input';
+import { getApiKey, setApiKey } from '../lib/ai';
 import { autoBackupOn, backupStatus, backupSupported, chooseFolder, lastBackupAt, onBackupChange, restoreNow, saveNow } from '../lib/backup';
 import { exportJson, importJson } from '../lib/progress';
 import { setSettings, useSettings } from '../lib/settings';
@@ -16,6 +17,7 @@ export function SettingsPage() {
   const [pendingRestore, setPendingRestore] = useState<string | null>(null);
   const [bkMsg, setBkMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [aiKey, setAiKey] = useState(getApiKey);
 
   useEffect(() => {
     if (!backupSupported) return;
@@ -138,6 +140,16 @@ export function SettingsPage() {
           </div>
         </section>
       )}
+
+      <section className="card">
+        <h2>Coach IA</h2>
+        <p className="muted small">{aiKey ? `Chave salva neste aparelho (termina em …${aiKey.slice(-4)}). Ela não vai para o backup do iCloud.` : 'Nenhuma chave salva. Adicione uma na aba Coach.'}</p>
+        <div className="actions">
+          {aiKey
+            ? <button className="btn ghost" onClick={() => { setApiKey(''); setAiKey(''); }}>Remover chave</button>
+            : <a className="btn ghost" href="#/coach">Abrir o Coach</a>}
+        </div>
+      </section>
 
       <section className="card">
         <h2>Progresso</h2>
