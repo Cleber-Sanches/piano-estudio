@@ -16,6 +16,9 @@ export const isNativeApp = Capacitor.isNativePlatform();
 
 export type NoteListener = (e: { type: 'on' | 'off'; midi: number; velocity: number; source: 'midi' | 'pc' | 'tela' }) => void;
 
+/** O plugin nativo manda o pedal de sustain (CC64) como a "nota" 128. */
+export const PEDAL = 128;
+
 export interface MidiDevice {
   id: string;
   name: string;
@@ -23,6 +26,8 @@ export interface MidiDevice {
 
 class InputHub {
   private listeners = new Set<NoteListener>();
+  private pedalListeners = new Set<() => void>();
+  private pedalDown = false;
   private access: MIDIAccess | null = null;
   private deviceListeners = new Set<(d: MidiDevice[]) => void>();
   private pcOctave = 4;
@@ -41,7 +46,20 @@ class InputHub {
     return () => { this.deviceListeners.delete(fn); };
   }
   emit(type: 'on' | 'off', midi: number, velocity: number, source: 'midi' | 'pc' | 'tela') {
+    if (midi === PEDAL) {
+      // O pedal não é nota: vai só para quem pediu o pedal, e só quando muda de estado.
+      const down = type === 'on';
+      if (down === this.pedalDown) return;
+      this.pedalDown = down;
+      if (down) this.pedalListeners.forEach((l) => l());
+      return;
+    }
     this.listeners.forEach((l) => l({ type, midi, velocity, source }));
+  }
+  /** Avisa quando o pedal de sustain é pisado. */
+  onPedal(fn: () => void) {
+    this.pedalListeners.add(fn);
+    return () => { this.pedalListeners.delete(fn); };
   }
 
   devices(): MidiDevice[] {
@@ -117,6 +135,7 @@ class InputHub {
     const vel = data[2];
     if (cmd === 0x90 && vel > 0) this.emit('on', note, vel / 127, 'midi');
     else if (cmd === 0x80 || (cmd === 0x90 && vel === 0)) this.emit('off', note, 0, 'midi');
+    else if (cmd === 0xb0 && note === 64) this.emit(vel >= 64 ? 'on' : 'off', PEDAL, vel >= 64 ? 1 : 0, 'midi');
   }
 
   /** Teclado do computador: A W S E D F T G Y H U J K = Dó a Dó; Z/X mudam a oitava. */

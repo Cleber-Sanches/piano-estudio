@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { click, play, release, startAudio, stopAll, onPianoLoad } from '../engine/audio';
 import { input } from '../engine/input';
 import { Practice, type PassResult, type PracticeMode } from '../engine/practice';
-import { coach } from '../lib/coach';
+import { coach, nextBpm } from '../lib/coach';
 import type { Lesson } from '../lib/lessons';
 import { addMinutes, recordAttempt, type LessonProgress } from '../lib/progress';
 import { setSettings, useSettings } from '../lib/settings';
@@ -52,6 +52,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
   const [result, setResult] = useState<{ r: PassResult; tips: string[]; progress?: LessonProgress; passed: boolean; moduleCleared: boolean } | null>(null);
   const [passes, setPasses] = useState<PassResult[]>([]);
   const [pianoLoad, setPianoLoad] = useState(0);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const cursorRef = useRef(0);
   const stage = useRef<StageHandle>(null);
   const pressed = useRef(new Map<number, 'certo' | 'errado' | 'livre'>());
@@ -146,7 +147,6 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
     [practice],
   );
 
-  useEffect(() => input.on((e) => handleNote(e.type, e.midi, e.velocity)), [handleNote]);
   const onScreenKey = useCallback((m: number, down: boolean) => input.emit(down ? 'on' : 'off', m, 0.7, 'tela'), []);
 
   // laço de animação
@@ -199,6 +199,24 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
     if (!practice.playing) stopAll();
     setPlaying(practice.playing);
   }, [practice]);
+
+  // começar pelo piano: qualquer tecla (parado) ou o pedal (tocar/pausar/repetir)
+  const resultRef = useRef(result);
+  resultRef.current = result;
+  const modalRef = useRef(settingsOpen);
+  modalRef.current = settingsOpen;
+  useEffect(
+    () =>
+      input.on((e) => {
+        if (e.type === 'on' && e.source === 'midi' && !practice.playing && !resultRef.current && !modalRef.current) {
+          toggle();
+          return;
+        }
+        handleNote(e.type, e.midi, e.velocity);
+      }),
+    [handleNote, toggle, practice],
+  );
+  useEffect(() => input.onPedal(() => { if (!modalRef.current) toggle(); }), [toggle]);
 
   const restart = useCallback(() => {
     practice.passIndex = 0;
@@ -257,6 +275,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
           <button className="stage-play" onClick={toggle} aria-label="Começar">
             <span>▶</span>
             <small>{mode === 'espera' ? 'Modo espera: a música espera você' : 'Modo tempo: siga o metrônomo'}</small>
+            <small className="stage-hint">Toque uma tecla do piano ou o pedal para começar</small>
             {pianoLoad < 1 && pianoLoad > 0 && <small>Carregando som do piano… {Math.round(pianoLoad * 100)}%</small>}
             {pianoLoad < 0 && <small>Não consegui baixar o som do piano. O app funciona, mas a mão automática fica muda.</small>}
           </button>
@@ -270,6 +289,8 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
                 <div><b className="mono">{result.r.hits}/{result.r.total}</b><span>notas certas</span></div>
                 <div><b className="mono">{result.r.wrong}</b><span>teclas erradas</span></div>
                 {mode === 'tempo' && <div><b className="mono">{result.r.avgOffsetMs > 0 ? '+' : ''}{Math.round(result.r.avgOffsetMs)} ms</b><span>{result.r.avgOffsetMs >= 0 ? 'atraso médio' : 'adiantado'}</span></div>}
+                {mode === 'tempo' && <div><b className="mono">{result.r.early}</b><span>adiantadas</span></div>}
+                {mode === 'tempo' && <div><b className="mono">{result.r.late}</b><span>atrasadas</span></div>}
               </div>
               <ul className="tips">{result.tips.map((t) => <li key={t}>{t}</li>)}</ul>
               {result.moduleCleared && <p className="done-badge">Módulo dominado no nivelamento</p>}
@@ -283,7 +304,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
                   <button className="btn ghost" onClick={() => { setMode('tempo'); setResult(null); }}>Ir para o modo tempo</button>
                 )}
                 {lesson && mode === 'tempo' && result.r.accuracy >= 0.9 && bpm < lesson.goalBpm && (
-                  <button className="btn ghost" onClick={() => { setBpm(Math.min(lesson.goalBpm, bpm + 4)); setResult(null); }}>Subir para {Math.min(lesson.goalBpm, bpm + 4)} BPM</button>
+                  <button className="btn ghost" onClick={() => { setBpm(nextBpm(bpm, lesson.goalBpm, result.r.accuracy)); setResult(null); }}>Subir para {nextBpm(bpm, lesson.goalBpm, result.r.accuracy)} BPM</button>
                 )}
                 {(result.passed || result.moduleCleared) && onNextLesson && <button className="btn ghost" onClick={onNextLesson}>Próxima lição →</button>}
               </div>
@@ -306,16 +327,6 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
           ))}
         </div>
 
-        {songHands.length > 1 && (
-          <div className="ctrl-group" role="radiogroup" aria-label="Mãos">
-            {songHands.map((o) => (
-              <button key={o.label} role="radio" aria-checked={hands.join() === o.v.join()} className={'seg' + (hands.join() === o.v.join() ? ' on' : '')} onClick={() => setHands(o.v)}>
-                {o.label}
-              </button>
-            ))}
-          </div>
-        )}
-
         {lesson ? (
           <div className="ctrl-group" aria-label="Andamento">
             <button className="btn ghost small" onClick={() => setBpm((b) => Math.max(30, b - 4))} aria-label="Diminuir BPM">−</button>
@@ -330,27 +341,46 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
           </label>
         )}
 
-        <div className="ctrl-group loop">
-          <label className="check-inline" htmlFor="loop-on">
-            <input id="loop-on" type="checkbox" checked={loopOn} onChange={(e) => setLoopOn(e.target.checked)} /> Repetir compassos
-          </label>
-          <input id="loop-de" type="number" min={1} max={total} value={loopFrom} onChange={(e) => setLoopFrom(Math.min(total, Math.max(1, Number(e.target.value) || 1)))} aria-label="Do compasso" />
-          <span className="muted">a</span>
-          <input id="loop-ate" type="number" min={1} max={total} value={loopTo} onChange={(e) => setLoopTo(Math.min(total, Math.max(1, Number(e.target.value) || 1)))} aria-label="Até o compasso" />
-        </div>
-
-        <div className="ctrl-group">
-          <label className="check-inline" htmlFor="metro"><input id="metro" type="checkbox" checked={settings.metronome} onChange={(e) => setSettings({ metronome: e.target.checked })} /> Metrônomo</label>
-          <label className="check-inline" htmlFor="partitura"><input id="partitura" type="checkbox" checked={settings.showSheet} onChange={(e) => setSettings({ showSheet: e.target.checked })} /> Partitura</label>
-        </div>
-
-        <div className="ctrl-group" role="radiogroup" aria-label="Notas caindo">
-          <span className="ctrl-label">Notas caindo</span>
-          {([['normal', 'Normais'], ['fraca', 'Fracas'], ['oculta', 'Só partitura']] as const).map(([v, label]) => (
-            <button key={v} role="radio" aria-checked={settings.fall === v} className={'seg' + (settings.fall === v ? ' on' : '')} onClick={() => setSettings({ fall: v })}>{label}</button>
-          ))}
-        </div>
+        <button className="btn ghost settings-btn" onClick={() => setSettingsOpen(true)} aria-label="Ajustes da prática">⚙ Ajustes</button>
       </div>
+
+      {settingsOpen && (
+        <div className="modal" onClick={(e) => { if (e.target === e.currentTarget) setSettingsOpen(false); }}>
+          <div className="modal-card" role="dialog" aria-modal="true" aria-label="Ajustes da prática">
+            <div className="modal-head">
+              <h3>Ajustes da prática</h3>
+              <button className="btn ghost small" onClick={() => setSettingsOpen(false)}>Fechar</button>
+            </div>
+            {songHands.length > 1 && (
+              <div className="ctrl-group" role="radiogroup" aria-label="Mãos">
+                {songHands.map((o) => (
+                  <button key={o.label} role="radio" aria-checked={hands.join() === o.v.join()} className={'seg' + (hands.join() === o.v.join() ? ' on' : '')} onClick={() => setHands(o.v)}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="ctrl-group loop">
+              <label className="check-inline" htmlFor="loop-on">
+                <input id="loop-on" type="checkbox" checked={loopOn} onChange={(e) => setLoopOn(e.target.checked)} /> Repetir compassos
+              </label>
+              <input id="loop-de" type="number" min={1} max={total} value={loopFrom} onChange={(e) => setLoopFrom(Math.min(total, Math.max(1, Number(e.target.value) || 1)))} aria-label="Do compasso" />
+              <span className="muted">a</span>
+              <input id="loop-ate" type="number" min={1} max={total} value={loopTo} onChange={(e) => setLoopTo(Math.min(total, Math.max(1, Number(e.target.value) || 1)))} aria-label="Até o compasso" />
+            </div>
+            <div className="ctrl-group">
+              <label className="check-inline" htmlFor="metro"><input id="metro" type="checkbox" checked={settings.metronome} onChange={(e) => setSettings({ metronome: e.target.checked })} /> Metrônomo</label>
+              <label className="check-inline" htmlFor="partitura"><input id="partitura" type="checkbox" checked={settings.showSheet} onChange={(e) => setSettings({ showSheet: e.target.checked })} /> Partitura</label>
+            </div>
+            <div className="ctrl-group" role="radiogroup" aria-label="Notas caindo">
+              <span className="ctrl-label">Notas caindo</span>
+              {([['normal', 'Normais'], ['fraca', 'Fracas'], ['oculta', 'Só partitura']] as const).map(([v, label]) => (
+                <button key={v} role="radio" aria-checked={settings.fall === v} className={'seg' + (settings.fall === v ? ' on' : '')} onClick={() => setSettings({ fall: v })}>{label}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="status-bar">
         <span>Compasso <b className="mono">{measure + 1}</b>/{total}</span>

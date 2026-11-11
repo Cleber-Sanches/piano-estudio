@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const base = { mode: 'tempo' as const, hands: ['R' as const], speed: 1, hits: 9, total: 10, wrong: 0, avgOffsetMs: 0, loop: null, troubleMeasures: [] };
-const res = (accuracy: number) => ({ total: 10, hits: Math.round(accuracy * 10), missed: 0, wrong: 0, accuracy, avgOffsetMs: 0, troubleMeasures: [] });
+const base = { mode: 'tempo' as const, hands: ['R' as const], speed: 1, hits: 9, total: 10, wrong: 0, avgOffsetMs: 0, loop: null, troubleMeasures: [], early: 0, late: 0 };
+const res = (accuracy: number) => ({ total: 10, hits: Math.round(accuracy * 10), missed: 0, wrong: 0, accuracy, avgOffsetMs: 0, troubleMeasures: [], early: 0, late: 0 });
 
 describe('progresso', () => {
   beforeEach(() => { vi.resetModules(); vi.useRealTimers(); });

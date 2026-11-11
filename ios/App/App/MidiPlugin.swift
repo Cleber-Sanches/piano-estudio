@@ -146,6 +146,9 @@ public class MidiPlugin: CAPPlugin, CAPBridgedPlugin {
                             events.append(["type": "on", "midi": note, "velocity": Double(vel) / 127.0])
                         } else if status == 0x80 || (status == 0x90 && vel == 0) {
                             events.append(["type": "off", "midi": note, "velocity": 0])
+                        } else if status == 0xB0 && note == 64 {
+                            // Pedal de sustain (CC64): vai como "nota" 128 para manter a API igual
+                            events.append(["type": vel >= 64 ? "on" : "off", "midi": 128, "velocity": vel >= 64 ? 1.0 : 0])
                         }
                     } else if type == 4 && i + 1 < count {
                         // MIDI 2.0 de canal: velocidade de 16 bits na segunda palavra
@@ -156,6 +159,9 @@ public class MidiPlugin: CAPPlugin, CAPBridgedPlugin {
                             events.append(["type": "on", "midi": note, "velocity": Double(vel16) / 65535.0])
                         } else if status == 0x80 || (status == 0x90 && vel16 == 0) {
                             events.append(["type": "off", "midi": note, "velocity": 0])
+                        } else if status == 0xB0 && note == 64 {
+                            let on = words[i + 1] >= 0x80000000
+                            events.append(["type": on ? "on" : "off", "midi": 128, "velocity": on ? 1.0 : 0])
                         }
                     }
                     i += size

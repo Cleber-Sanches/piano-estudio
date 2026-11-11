@@ -13,6 +13,12 @@ export interface CoachInput {
   inLoop: boolean;
 }
 
+/** Próximo BPM depois de uma passada limpa: metade do caminho até a meta (mín. +4); se ficou impecável (≥95%), vai direto à meta. */
+export function nextBpm(bpm: number, goal: number, acc: number): number {
+  if (acc >= 0.95) return goal;
+  return Math.min(goal, Math.max(bpm + 4, bpm + Math.ceil((goal - bpm) / 2)));
+}
+
 export function coach({ result, mode, bpm, speed, cleanStreak, goal, inLoop }: CoachInput): string[] {
   const tips: string[] = [];
   const acc = result.accuracy;
@@ -57,7 +63,7 @@ export function coach({ result, mode, bpm, speed, cleanStreak, goal, inLoop }: C
 
   if (acc >= 0.9 && goal && bpm != null) {
     if (bpm >= goal.bpm && acc >= goal.accuracy) tips.push('Meta da lição batida. Pode seguir para a próxima.');
-    else tips.push(`Limpo a ${bpm} BPM. Suba para ${Math.min(goal.bpm, bpm + 4)} BPM e repita.`);
+    else tips.push(`Limpo a ${bpm} BPM. Suba para ${nextBpm(bpm, goal.bpm, acc)} BPM e repita.`);
   } else if (acc >= 0.9 && bpm == null) {
     tips.push(speed < 1 ? `Limpo a ${Math.round(speed * 100)}%. Suba para ${Math.min(100, Math.round(speed * 100) + 10)}%.` : 'Limpo na velocidade original. Tente tocar sem olhar a tela.');
   }

@@ -28,6 +28,31 @@ export interface PassResult {
   avgOffsetMs: number;
   /** Compassos com mais erros (índice 0). */
   troubleMeasures: number[];
+  /** Quantas notas certas saíram adiantadas / atrasadas (fora da janela "perfeito"). */
+  early: number;
+  late: number;
+}
+
+export type FeedbackKind = 'perfeito' | 'adiantado' | 'atrasado' | 'errado';
+
+/** Último julgamento de uma tecla, para mostrar na tela por alguns instantes. */
+export interface Feedback {
+  kind: FeedbackKind;
+  /** Desvio em ms (negativo = adiantado). */
+  ms: number;
+  midi: number;
+  /** performance.now() de quando aconteceu. */
+  at: number;
+}
+
+// Mesmas janelas do guatá-learning (em ms reais).
+const PERFECT_EARLY_MS = 25;
+const PERFECT_LATE_MS = 30;
+
+export function judgeOffset(ms: number): FeedbackKind {
+  if (ms < -PERFECT_EARLY_MS) return 'adiantado';
+  if (ms > PERFECT_LATE_MS) return 'atrasado';
+  return 'perfeito';
 }
 
 export type PracticeEvent =
@@ -67,6 +92,14 @@ export class Practice {
   private lastBeat = -Infinity;
   private listeners: Array<(e: PracticeEvent) => void> = [];
   readonly held = new Set<number>();
+  /** Feedbacks recentes (um por tecla) para a tela desenhar. */
+  feedback: Feedback[] = [];
+
+  private pushFeedback(kind: FeedbackKind, ms: number, midi: number) {
+    const now = performance.now();
+    this.feedback = this.feedback.filter((f) => f.midi !== midi && now - f.at < 1200);
+    this.feedback.push({ kind, ms, midi, at: now });
+  }
 
   constructor(song: Song, opts: PracticeOptions) {
     this.song = song;
@@ -111,6 +144,7 @@ export class Practice {
     this.state.clear();
     this.offsets.clear();
     this.wrongAt = [];
+    this.feedback = [];
     this.held.clear();
     const mine = this.judged;
     mine.forEach((n) => this.state.set(n.id, 'pendente'));
@@ -235,18 +269,21 @@ export class Practice {
       const early = Math.max(0.3, this.song.beatToSec(0.5));
       if (g.start - this.t > early) {
         this.wrongAt.push(this.t);
+        this.pushFeedback('adiantado', ((this.t - g.start) / this.opts.speed) * 1000, midi);
         return;
       }
       const hit = g.notes.find((n) => n.midi === midi && !g.done.has(n.id));
       if (hit) {
         g.done.add(hit.id);
         this.state.set(hit.id, 'acerto');
+        this.pushFeedback('perfeito', 0, midi);
         if (g.done.size === g.notes.length) {
           this.groupIdx++;
           this.waiting = false;
         }
       } else if (!g.notes.some((n) => n.midi === midi)) {
         this.wrongAt.push(this.t);
+        this.pushFeedback('errado', 0, midi);
       }
       return;
     }
@@ -262,8 +299,10 @@ export class Practice {
       this.state.set(best.id, 'acerto');
       const off = ((tNow - best.start) / this.opts.speed) * 1000;
       this.offsets.set(best.id, off);
+      this.pushFeedback(judgeOffset(off), off, midi);
     } else {
       this.wrongAt.push(this.t);
+      this.pushFeedback('errado', 0, midi);
     }
   }
 
@@ -298,6 +337,8 @@ export class Practice {
       accuracy: denom ? hits / denom : 1,
       avgOffsetMs: offs.length ? offs.reduce((a, b) => a + b, 0) / offs.length : 0,
       troubleMeasures,
+      early: offs.filter((o) => judgeOffset(o) === 'adiantado').length,
+      late: offs.filter((o) => judgeOffset(o) === 'atrasado').length,
     };
   }
 

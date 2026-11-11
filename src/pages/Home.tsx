@@ -44,7 +44,13 @@ export function Home() {
   const nextDoneToday = attemptedToday((a) => a.kind === 'licao' && a.id === next, store) || !!store.lessons[next]?.completedAt?.startsWith(today());
   plan.push({
     key: 'licao', title: nextLesson.kind === 'peca' ? 'Peça nova' : 'Lição nova', minutes: 12,
-    detail: `${nextLesson.title}. Comece no modo espera; quando sair limpo, modo tempo.`,
+    detail: (() => {
+      const p = store.lessons[next];
+      if (!p?.attempts || p.completed) return `${nextLesson.title}. Comece no modo espera; quando sair limpo, modo tempo.`;
+      const meta = `${nextLesson.goalBpm} BPM no modo tempo com ${Math.round(nextLesson.goalAccuracy * 100)}% de acerto`;
+      const melhor = p.bestBpm ? `seu melhor: ${p.bestBpm} BPM` : 'ainda sem passada no modo tempo';
+      return `${nextLesson.title}. Continua aqui até chegar a ${meta} (${melhor}).`;
+    })(),
     done: nextDoneToday,
     href: '#/licao/' + next,
   });

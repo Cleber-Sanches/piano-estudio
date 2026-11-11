@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import type { Practice } from '../engine/practice';
+import type { FeedbackKind, Practice } from '../engine/practice';
 import type { Song } from '../lib/song';
 import { isBlack, PITCH_PT } from '../lib/theory';
 
@@ -40,17 +40,40 @@ interface Layout {
   keyX: Map<number, { x: number; w: number; black: boolean }>;
 }
 
-export function keyRange(song: Song): [number, number] {
+/** Notas mais grave e mais aguda da música (ou null se vazia). */
+export function songSpan(song: Song): [number, number] | null {
   let lo = 127, hi = 0;
   song.notes.forEach((n) => { lo = Math.min(lo, n.midi); hi = Math.max(hi, n.midi); });
-  if (lo > hi) { lo = 48; hi = 72; }
-  lo = Math.min(lo - 2, 48);
-  hi = Math.max(hi + 2, 72);
-  // começa num Dó e termina num Dó para o teclado ficar bonito
-  lo = lo - (((lo % 12) + 12) % 12);
-  hi = hi + ((12 - (((hi % 12) + 12) % 12)) % 12);
+  return lo > hi ? null : [lo, hi];
+}
+
+/**
+ * Faixa do teclado na tela. Fica sempre Dó2–Dó7 (36–96), com o Dó central no meio,
+ * para o teclado não "pular" de uma música para outra. Só alarga (em Dós) se a música sair disso.
+ */
+export function keyRange(song: Song): [number, number] {
+  let lo = 36, hi = 96;
+  const s = songSpan(song);
+  if (s) {
+    if (s[0] < lo) lo = s[0] - (((s[0] % 12) + 12) % 12);
+    if (s[1] > hi) hi = s[1] + ((12 - (((s[1] % 12) + 12) % 12)) % 12);
+  }
   return [Math.max(21, lo), Math.min(108, hi)];
 }
+
+const FEEDBACK_TEXT: Record<FeedbackKind, string> = {
+  perfeito: 'Perfeito',
+  adiantado: 'Adiantado',
+  atrasado: 'Atrasado',
+  errado: 'Errada',
+};
+const FEEDBACK_COLOR: Record<FeedbackKind, string> = {
+  perfeito: '#7BD88F',
+  adiantado: '#7FA7F5',
+  atrasado: '#E2A84B',
+  errado: '#E5534B',
+};
+const FEEDBACK_MS = 800;
 
 function layout(lo: number, hi: number, width: number): Layout {
   const whites: number[] = [];
@@ -84,10 +107,12 @@ export const Stage = forwardRef<StageHandle, { song: Song; onKey?: (midi: number
   const size = useRef({ w: 800, h: 400, dpr: 1 });
   const lay = useRef<Layout | null>(null);
   const range = useRef(keyRange(song));
+  const span = useRef(songSpan(song));
   const maxDur = useRef(0);
 
   useEffect(() => {
     range.current = keyRange(song);
+    span.current = songSpan(song);
     maxDur.current = song.notes.reduce((m, n) => Math.max(m, n.dur), 0);
   }, [song]);
 
@@ -160,6 +185,16 @@ export const Stage = forwardRef<StageHandle, { song: Song; onKey?: (midi: number
 
       ctx.fillStyle = COLORS.bg;
       ctx.fillRect(0, 0, w, h);
+
+      // região que a música usa (faixa suave acima do teclado)
+      const sp = span.current;
+      if (sp) {
+        const a = L.keyX.get(sp[0]), b = L.keyX.get(sp[1]);
+        if (a && b) {
+          ctx.fillStyle = 'rgba(226,168,75,0.035)';
+          ctx.fillRect(a.x, 0, b.x + b.w - a.x, nowY);
+        }
+      }
 
       // raias
       for (const [m, k] of L.keyX) {
@@ -284,6 +319,20 @@ export const Stage = forwardRef<StageHandle, { song: Song; onKey?: (midi: number
           ctx.globalAlpha = 1;
         }
         const pc = ((m % 12) + 12) % 12;
+        const inSong = !sp || (m >= sp[0] && m <= sp[1]);
+        if (!inSong) {
+          ctx.fillStyle = 'rgba(16,16,21,0.18)';
+          roundRect(ctx, k.x + 0.5, nowY, k.w - 1, kbH - 1, 4);
+          ctx.fill();
+        }
+        if (pc === 0 && !view.showNames) {
+          ctx.fillStyle = m === 60 ? '#8a6312' : '#8b887f';
+          ctx.font = `${m === 60 ? 700 : 600} ${Math.max(8, Math.min(11, k.w * 0.5))}px Inter, system-ui, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillText(`C${Math.floor(m / 12) - 1}`, k.x + k.w / 2, nowY + kbH - 6);
+          ctx.textAlign = 'left';
+        }
         if (view.showNames && k.w >= 16) {
           ctx.fillStyle = m === 60 ? '#8a6312' : '#8b887f';
           ctx.font = `${m === 60 ? 700 : 500} ${Math.min(11, k.w * 0.42)}px Inter, system-ui, sans-serif`;
@@ -307,6 +356,32 @@ export const Stage = forwardRef<StageHandle, { song: Song; onKey?: (midi: number
           ctx.globalAlpha = 1;
         }
       }
+
+      // feedback de tempo: adiantado / atrasado / perfeito / errada
+      const now = performance.now();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      for (const f of p.feedback) {
+        const age = now - f.at;
+        if (age > FEEDBACK_MS) continue;
+        const k = L.keyX.get(f.midi);
+        if (!k) continue;
+        const a = 1 - age / FEEDBACK_MS;
+        const cx = Math.min(w - 44, Math.max(44, k.x + k.w / 2));
+        const y = nowY - 10 - (1 - a) * 18;
+        const ms = Math.round(Math.abs(f.ms));
+        const label = (f.kind === 'adiantado' || f.kind === 'atrasado') && ms >= 1 ? `${FEEDBACK_TEXT[f.kind]} ${ms}ms` : FEEDBACK_TEXT[f.kind];
+        ctx.font = '700 13px Inter, system-ui, sans-serif';
+        const tw = ctx.measureText(label).width;
+        ctx.globalAlpha = a;
+        ctx.fillStyle = 'rgba(16,16,21,0.85)';
+        roundRect(ctx, cx - tw / 2 - 8, y - 22, tw + 16, 22, 11);
+        ctx.fill();
+        ctx.fillStyle = FEEDBACK_COLOR[f.kind];
+        ctx.fillText(label, cx, y - 4);
+        ctx.globalAlpha = 1;
+      }
+      ctx.textAlign = 'left';
 
       // contagem
       if (t < (p.opts.loop ? song.beatToSec(p.opts.loop[0]) : 0) && p.playing) {
