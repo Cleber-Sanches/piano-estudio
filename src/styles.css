@@ -258,3 +258,11 @@ a.lesson { text-decoration: none; }
 .coach-msg li { margin: 3px 0; }
 .coach-input { position: sticky; bottom: 0; display: flex; gap: 10px; align-items: flex-end; padding: 12px 0 max(12px, env(safe-area-inset-bottom)); background: var(--bg); }
 .coach-input textarea { flex: 1; resize: none; min-height: 44px; background: var(--surface); }
+
+/* Calibração de atraso */
+.calib { display: flex; flex-direction: column; gap: 10px; }
+.calib-lane { position: relative; height: 180px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); overflow: hidden; }
+.calib-ball { position: absolute; left: 50%; top: 0; width: 28px; height: calc(100% - 22px); margin-left: -14px; }
+.calib-ball::after { content: ""; position: absolute; left: 0; bottom: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--brass); }
+.calib-line { position: absolute; left: 0; right: 0; bottom: 22px; height: 3px; background: var(--ink); opacity: 0.6; }
+.calib-flash { position: absolute; inset: 0; background: var(--brass-soft); opacity: 0; pointer-events: none; transition: opacity 60ms; mix-blend-mode: multiply; }

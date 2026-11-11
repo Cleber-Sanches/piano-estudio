@@ -91,3 +91,14 @@ export function click(accent: boolean) {
   o.start();
   o.stop(c.currentTime + 0.06);
 }
+
+/** Atraso entre mandar tocar e o som sair do alto-falante (s). O iPad nem sempre informa; usa 40 ms nesse caso. */
+export function audioLeadSec(): number {
+  try {
+    const c = audioContext() as AudioContext & { outputLatency?: number };
+    const l = (c.outputLatency || 0) + (c.baseLatency || 0);
+    return l > 0.005 ? Math.min(0.15, l) : 0.04;
+  } catch {
+    return 0.04;
+  }
+}

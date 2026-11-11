@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { setVolume, startAudio } from '../engine/audio';
 import { input, isNativeApp, type MidiDevice } from '../engine/input';
+import { Calibrate } from '../components/Calibrate';
 import { getApiKey, setApiKey } from '../lib/ai';
 import { autoBackupOn, backupStatus, backupSupported, chooseFolder, lastBackupAt, onBackupChange, restoreNow, saveNow } from '../lib/backup';
 import { exportJson, importJson } from '../lib/progress';
@@ -113,7 +114,8 @@ export function SettingsPage() {
         <label htmlFor="latencia">Compensar atraso do teclado: <span className="mono">{s.latencyMs} ms</span>
           <input id="latencia" type="range" min={0} max={150} step={5} value={s.latencyMs} onChange={(e) => setSettings({ latencyMs: Number(e.target.value) })} />
         </label>
-        <p className="muted small">Se o resultado sempre diz que você atrasa uns 30–60 ms mesmo tocando junto do metrônomo, aumente a compensação.</p>
+        <p className="muted small">Se o modo tempo diz que você atrasou mesmo apertando junto com a nota, calibre: o app mede o atraso do caminho piano → iPad e compensa sozinho.</p>
+        <Calibrate />
       </section>
 
       {backupSupported && (

@@ -104,3 +104,14 @@ describe('modo espera, tecla cedo demais', () => {
     expect(p.state.get(0)).toBe('acerto');
   });
 });
+
+describe('modo tempo: tecla certa atrasada demais', () => {
+  it('conta só como nota perdida, sem somar tecla errada', () => {
+    const p = new Practice(song, { ...base, mode: 'tempo', hands: ['R'] });
+    p.playing = true;
+    run(p, 2.3); // passa da nota 60 (t=0) e da janela de 150 ms
+    p.noteOn(60);
+    expect(p.wrongCount).toBe(0);
+    expect(p.feedback.at(-1)?.kind).toBe('atrasado');
+  });
+});

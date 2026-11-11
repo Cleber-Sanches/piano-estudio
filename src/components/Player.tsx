@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { click, play, release, startAudio, stopAll, onPianoLoad } from '../engine/audio';
+import { audioLeadSec, click, play, release, startAudio, stopAll, onPianoLoad } from '../engine/audio';
 import { input } from '../engine/input';
 import { Practice, type PassResult, type PracticeMode } from '../engine/practice';
 import { coach, nextBpm } from '../lib/coach';
@@ -61,7 +61,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
     ? [(Math.min(loopFrom, loopTo) - 1) * song.beatsPerMeasure, Math.max(loopFrom, loopTo) * song.beatsPerMeasure]
     : null;
 
-  const opts = { mode, hands, speed, loop, windowMs: settings.windowMs, latencyMs: settings.latencyMs };
+  const opts = { mode, hands, speed, loop, windowMs: settings.windowMs, latencyMs: settings.latencyMs, audioLeadSec: audioLeadSec() };
   const practice = useMemo(() => new Practice(song, opts), [song]); // eslint-disable-line react-hooks/exhaustive-deps
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -71,7 +71,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
 
   // opções mudaram: aplica (e reinicia quando muda o que é avaliado)
   useEffect(() => {
-    practice.setOptions({ mode, hands, loop, speed, windowMs: settings.windowMs, latencyMs: settings.latencyMs });
+    practice.setOptions({ mode, hands, loop, speed, windowMs: settings.windowMs, latencyMs: settings.latencyMs, audioLeadSec: audioLeadSec() });
     cleanStreak.current = 0;
     setPasses([]);
     setSheetVersion((v) => v + 1);
@@ -294,6 +294,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
               </div>
               <ul className="tips">{result.tips.map((t) => <li key={t}>{t}</li>)}</ul>
               {result.moduleCleared && <p className="done-badge">Módulo dominado no nivelamento</p>}
+              {!lesson && mode === 'tempo' && speed >= 1 && result.r.accuracy >= 0.9 && <p className="done-badge">Limpo na velocidade real da música</p>}
               {!result.moduleCleared && result.passed && <p className="done-badge">{kind === 'teste' ? 'Teste aprovado' : 'Meta batida'}</p>}
               <div className="actions">
                 <button className="btn" onClick={() => { setResult(null); restart(); }}>Tocar de novo</button>
@@ -305,6 +306,11 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
                 )}
                 {lesson && mode === 'tempo' && result.r.accuracy >= 0.9 && bpm < lesson.goalBpm && (
                   <button className="btn ghost" onClick={() => { setBpm(nextBpm(bpm, lesson.goalBpm, result.r.accuracy)); setResult(null); }}>Subir para {nextBpm(bpm, lesson.goalBpm, result.r.accuracy)} BPM</button>
+                )}
+                {!lesson && mode === 'tempo' && result.r.accuracy >= 0.9 && speed < 1 && (
+                  <button className="btn ghost" onClick={() => { setSpeed(Math.min(1, Math.round((speed + 0.1) * 20) / 20)); setResult(null); }}>
+                    {speed + 0.1 >= 0.999 ? 'Ir para a velocidade real (100%)' : `Subir para ${Math.round(Math.min(1, Math.round((speed + 0.1) * 20) / 20) * 100)}%`}
+                  </button>
                 )}
                 {(result.passed || result.moduleCleared) && onNextLesson && <button className="btn ghost" onClick={onNextLesson}>Próxima lição →</button>}
               </div>
@@ -338,6 +344,7 @@ export function Player({ kind, id, lesson, song: songProp, onExit, onNextLesson,
             Velocidade
             <input id="velocidade" type="range" min={0.25} max={1.2} step={0.05} value={speed} onChange={(e) => setSpeed(Number(e.target.value))} />
             <span className="mono">{Math.round(speed * 100)}% · {Math.round(song.bpm * speed)} BPM</span>
+            {speed !== 1 && <button type="button" className="btn ghost small" onClick={() => setSpeed(1)}>100%</button>}
           </label>
         )}
 

@@ -16,6 +16,8 @@ export interface PracticeOptions {
   windowMs: number;
   /** Compensação de latência do teclado, em ms. */
   latencyMs: number;
+  /** Quanto antes (s reais) disparar som/metrônomo para chegarem no ouvido na hora certa. */
+  audioLeadSec?: number;
 }
 
 export interface PassResult {
@@ -90,6 +92,8 @@ export class Practice {
   private groupIdx = 0;
   private autoIdx = 0;
   private lastBeat = -Infinity;
+  /** performance.now() do último tick, para saber o tempo exato entre um quadro e outro. */
+  private lastTickAt = 0;
   private listeners: Array<(e: PracticeEvent) => void> = [];
   readonly held = new Set<number>();
   /** Feedbacks recentes (um por tecla) para a tela desenhar. */
@@ -199,6 +203,7 @@ export class Practice {
 
   /** Avança `dtReal` segundos de relógio real. */
   tick(dtReal: number) {
+    this.lastTickAt = performance.now();
     if (!this.playing || this.finished) return;
     const prevT = this.t;
     let next = this.t + dtReal * this.opts.speed;
@@ -220,7 +225,8 @@ export class Practice {
     }
 
     this.t = next;
-    this.emitAuto(prevT, next);
+    const lead = this.leadSec();
+    this.emitAuto(prevT + lead, next + lead);
     this.emitBeats();
 
     const [, end] = this.range;
@@ -249,8 +255,14 @@ export class Practice {
     }
   }
 
+  private leadSec() {
+    return this.opts.mode === 'tempo' ? Math.min(0.2, Math.max(0, this.opts.audioLeadSec ?? 0)) * this.opts.speed : 0;
+  }
+
   private emitBeats() {
-    const b = Math.floor(this.beat + 1e-6);
+    const tb = this.t + this.leadSec();
+    const beat = tb >= 0 ? this.song.secToBeat(tb) : tb / this.song.beatToSec(1);
+    const b = Math.floor(beat + 1e-6);
     if (b > this.lastBeat) {
       this.lastBeat = b;
       const bpm = this.song.beatsPerMeasure;
@@ -287,7 +299,9 @@ export class Practice {
       }
       return;
     }
-    const tNow = this.t - (this.opts.latencyMs / 1000) * this.opts.speed;
+    // tempo exato do toque: o relógio só anda a cada quadro, então soma o que passou desde o último
+    const since = this.lastTickAt ? Math.min(0.1, Math.max(0, (performance.now() - this.lastTickAt) / 1000)) : 0;
+    const tNow = this.t + since * this.opts.speed - (this.opts.latencyMs / 1000) * this.opts.speed;
     const win = this.windowSec();
     let best: SongNote | null = null;
     for (const n of this.judged) {
@@ -301,6 +315,12 @@ export class Practice {
       this.offsets.set(best.id, off);
       this.pushFeedback(judgeOffset(off), off, midi);
     } else {
+      // Tecla certa, só que tarde demais: a nota já conta como perdida; não penaliza de novo como tecla errada.
+      const late = this.judged.find((n) => n.midi === midi && this.state.get(n.id) === 'erro' && tNow - n.start > 0 && tNow - n.start <= win * 2.5);
+      if (late) {
+        this.pushFeedback('atrasado', ((tNow - late.start) / this.opts.speed) * 1000, midi);
+        return;
+      }
       this.wrongAt.push(this.t);
       this.pushFeedback('errado', 0, midi);
     }
