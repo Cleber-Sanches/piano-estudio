@@ -20,10 +20,17 @@ public class MidiPlugin: CAPPlugin, CAPBridgedPlugin {
     private var client = MIDIClientRef()
     private var port = MIDIPortRef()
     private var started = false
-    private var connected = Set<MIDIUniqueID>()
+    private var connected = Set<MIDIEndpointRef>()
 
     @objc func start(_ call: CAPPluginCall) {
+        // O cliente MIDI precisa nascer na thread principal (que tem run loop):
+        // só assim o iOS avisa quando um teclado é ligado com o app já aberto.
+        DispatchQueue.main.async { self.startOnMain(call) }
+    }
+
+    private func startOnMain(_ call: CAPPluginCall) {
         if started {
+            connectAll()
             call.resolve(["devices": devices()])
             return
         }
@@ -80,21 +87,12 @@ public class MidiPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Fontes
 
     private func connectAll() {
-        var present = Set<MIDIUniqueID>()
-        for i in 0..<MIDIGetNumberOfSources() {
-            var uid: MIDIUniqueID = 0
-            MIDIObjectGetIntegerProperty(MIDIGetSource(i), kMIDIPropertyUniqueID, &uid)
-            present.insert(uid)
-        }
-        // Esquece fontes que sumiram, para reconectar quando o teclado voltar.
-        connected.formIntersection(present)
-        for i in 0..<MIDIGetNumberOfSources() {
-            let src = MIDIGetSource(i)
-            var uid: MIDIUniqueID = 0
-            MIDIObjectGetIntegerProperty(src, kMIDIPropertyUniqueID, &uid)
-            if connected.contains(uid) { continue }
+        let sources = (0..<MIDIGetNumberOfSources()).map { MIDIGetSource($0) }.filter { $0 != 0 }
+        // Esquece entradas que sumiram (cabo tirado), para reconectar quando o teclado voltar.
+        connected.formIntersection(sources)
+        for src in sources where !connected.contains(src) {
             if MIDIPortConnectSource(port, src, nil) == noErr {
-                connected.insert(uid)
+                connected.insert(src)
             }
         }
     }
