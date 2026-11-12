@@ -182,6 +182,52 @@ export function hotCrossBuns(bpm: number, hands: Hand[]): Song {
   return fixedTempoSong({ title: 'Hot Cross Buns', bpm, key: 'C', notes: both(rh, lh, hands) });
 }
 
+/** Minueto em Sol (Petzold, do Caderno de Anna Magdalena Bach). Direita original; esquerda simplificada em mínimas pontuadas. */
+export function minueto(bpm: number, hands: Hand[]): Song {
+  const e = 0.5;
+  const G4b = 67, A4b = 69, B4 = 71, C5 = 72, D5 = 74, E5 = 76, Fs5 = 78, G5 = 79, Fs4 = 66;
+  const a: Ev[] = [
+    [D5, 1, 5], [G4b, e, 1], [A4b, e, 2], [B4, e, 3], [C5, e, 4],
+    [D5, 1, 5], [G4b, 1, 1], [G4b, 1, 1],
+    [E5, 1, 5], [C5, e, 1], [D5, e, 2], [E5, e, 3], [Fs5, e, 4],
+    [G5, 1, 5], [G4b, 1, 1], [G4b, 1, 1],
+    [C5, 1, 4], [D5, e, 5], [C5, e, 4], [B4, e, 3], [A4b, e, 2],
+    [B4, 1, 3], [C5, e, 4], [B4, e, 3], [A4b, e, 2], [G4b, e, 1],
+  ];
+  const rh: Ev[] = [
+    ...a, [Fs4, 1, 2], [G4b, e, 1], [A4b, e, 2], [B4, e, 3], [G4b, e, 1], [A4b, 3, 2],
+    ...a, [A4b, 1, 2], [B4, e, 3], [A4b, e, 2], [G4b, e, 1], [Fs4, e, 2], [G4b, 3, 1],
+  ];
+  const roots = [55, 59, 60, 59, 57, 55, 50, 54, 55, 59, 60, 59, 57, 55, 50, 43];
+  const lh: Ev[] = roots.map((r) => [r, 3] as Ev);
+  return fixedTempoSong({ title: 'Minueto em Sol (Petzold)', bpm, timeSig: [3, 4], key: 'G', notes: both(rh, lh, hands) });
+}
+
+/** Prelúdio em Dó, BWV 846 (Bach). Cada compasso: um acorde quebrado, repetido duas vezes. */
+export function preludio(bpm: number, hands: Hand[]): Song {
+  const M: number[][] = [
+    [60, 64, 67, 72, 76], [60, 62, 69, 74, 77], [59, 62, 67, 74, 77], [60, 64, 67, 72, 76],
+    [60, 64, 69, 76, 81], [60, 62, 66, 69, 74], [59, 62, 67, 74, 79], [59, 60, 64, 67, 72],
+    [57, 60, 64, 67, 72], [50, 57, 62, 66, 72], [55, 59, 62, 67, 71], [55, 58, 64, 67, 73],
+    [53, 57, 62, 69, 74], [53, 56, 62, 65, 71], [52, 55, 60, 67, 72], [52, 53, 57, 60, 65],
+    [50, 53, 57, 60, 65], [43, 50, 55, 59, 65], [48, 52, 55, 60, 64],
+  ];
+  const s = 0.25;
+  const rh: Ev[] = [];
+  const lh: Ev[] = [];
+  for (const [n1, n2, n3, n4, n5] of M) {
+    for (let half = 0; half < 2; half++) {
+      lh.push([n1, s, 5], [n2, 1.75, 2]);
+      rh.push([0, 0.5], [n3, s, 1], [n4, s, 3], [n5, s, 5], [n3, s, 1], [n4, s, 3], [n5, s, 5]);
+    }
+  }
+  const notes = both(rh, lh, hands);
+  const end = M.length * 4;
+  if (hands.includes('L')) notes.push({ midi: 36, beat: end, beats: 4, hand: 'L', finger: 5 }, { midi: 48, beat: end, beats: 4, hand: 'L', finger: 1 });
+  if (hands.includes('R')) [64, 67, 72].forEach((m, i) => notes.push({ midi: m, beat: end, beats: 4, hand: 'R', finger: [1, 2, 5][i] }));
+  return fixedTempoSong({ title: 'Prelúdio em Dó (Bach)', bpm, key: 'C', notes });
+}
+
 export type Collection = 'cantigas' | 'classicos' | 'datas';
 
 export const COLLECTIONS: { id: Collection; title: string; intro: string }[] = [
@@ -213,6 +259,8 @@ export const BUILTIN_PIECES: BuiltinPiece[] = [
   { id: 'ode', title: 'Ode à Alegria (Beethoven)', level: 1, bpm: 100, collection: 'classicos', kids: true, why: 'Posição fixa de cinco dedos e o primeiro ritmo pontuado.', build: odeAlegria },
   { id: 'jingle', title: 'Jingle Bells (refrão)', level: 2, bpm: 110, collection: 'datas', why: 'Melodia com baixo de Dó, Fá e Sol: o campo harmônico na prática.', build: jingleBells },
   { id: 'canon', title: 'Cânone em Ré (Pachelbel)', level: 2, bpm: 70, collection: 'classicos', why: 'A progressão mais famosa da música, em Ré maior com Fá♯ e Dó♯. Primeiro os acordes, depois a melodia.', build: canon },
+  { id: 'minueto', title: 'Minueto em Sol (Petzold)', level: 3, bpm: 100, collection: 'classicos', why: 'Barroco em 3/4: colcheias que andam pela escala de Sol e a mão que sai da posição.', build: minueto },
+  { id: 'preludio', title: 'Prelúdio em Dó (Bach)', level: 3, bpm: 60, collection: 'classicos', why: 'Um acorde quebrado por compasso: a harmonia inteira passa pelas suas mãos. Use o pedal.', build: preludio },
   { id: 'elise', title: 'Für Elise, parte A (Beethoven)', level: 3, bpm: 70, collection: 'classicos', why: 'Semicolcheias, mãos alternadas e acidentes. O desafio clássico do iniciante.', build: furElise },
 ];
 

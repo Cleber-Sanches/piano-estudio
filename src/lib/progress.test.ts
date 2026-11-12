@@ -9,25 +9,25 @@ describe('progresso', () => {
   it('conclui a lição na meta e agenda revisão para amanhã; revisão aprovada sobe o intervalo', async () => {
     const p = await import('./progress');
     const goal = { bpm: 60, accuracy: 0.9 };
-    let r = p.recordAttempt({ ...base, kind: 'licao', id: 'a1', title: 'a1', bpm: 60, accuracy: 0.95 }, res(0.95), goal);
+    let r = p.recordAttempt({ ...base, kind: 'licao', id: '1a', title: '1a', bpm: 60, accuracy: 0.95 }, res(0.95), goal);
     expect(r.passed).toBe(true);
     expect(r.lesson.review).toEqual({ due: p.addDays(p.today(), 1), step: 0 });
     vi.useFakeTimers();
     vi.setSystemTime(new Date(Date.now() + 86400000 * 1.2));
-    expect(p.dueReviews()).toContain('a1');
-    r = p.recordAttempt({ ...base, kind: 'licao', id: 'a1', title: 'a1', bpm: 60, accuracy: 0.95 }, res(0.95), goal);
+    expect(p.dueReviews()).toContain('1a');
+    r = p.recordAttempt({ ...base, kind: 'licao', id: '1a', title: '1a', bpm: 60, accuracy: 0.95 }, res(0.95), goal);
     expect(r.lesson.review?.step).toBe(1);
-    expect(p.dueReviews()).not.toContain('a1');
+    expect(p.dueReviews()).not.toContain('1a');
   });
 
   it('teste de módulo aprovado marca as lições do módulo, mas não as peças', async () => {
     const p = await import('./progress');
-    const r = p.recordAttempt({ ...base, kind: 'teste', id: 'a4', title: 't', bpm: 60, accuracy: 0.95 }, res(0.95), { bpm: 60, accuracy: 0.9 }, 'A');
+    const r = p.recordAttempt({ ...base, kind: 'teste', id: '1c', title: 't', bpm: 60, accuracy: 0.95 }, res(0.95), { bpm: 60, accuracy: 0.9 }, 'N1');
     expect(r.moduleCleared).toBe(true);
     const s = p.load();
-    expect(['a1', 'a2', 'a3', 'a4'].every((id) => s.lessons[id]?.completed)).toBe(true);
-    expect(s.lessons['pa']?.completed).toBeFalsy();
-    expect(p.nextLessonId()).toBe('pa');
+    expect(['1a', '1b', '1c'].every((id) => s.lessons[id]?.completed)).toBe(true);
+    expect(s.lessons['1p']?.completed).toBeFalsy();
+    expect(p.nextLessonId()).toBe('1p');
   });
 
   it('leitura libera o próximo nível só com 90% e até 2,5 s', async () => {

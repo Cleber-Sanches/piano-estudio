@@ -54,20 +54,38 @@ export function triad(base: number, mode: Mode, degree: number): number[] {
   return [at(0), at(2), at(4)];
 }
 
+/** Dedilhado de subida (1 oitava, 8 notas) das escalas maiores, por tônica. Menores harmônicas usadas aqui seguem o mesmo padrão. */
+const RH_UP: Record<number, number[]> = {
+  0: [1, 2, 3, 1, 2, 3, 4, 5], 7: [1, 2, 3, 1, 2, 3, 4, 5], 2: [1, 2, 3, 1, 2, 3, 4, 5], 9: [1, 2, 3, 1, 2, 3, 4, 5],
+  4: [1, 2, 3, 1, 2, 3, 4, 5], 11: [1, 2, 3, 1, 2, 3, 4, 5], 5: [1, 2, 3, 4, 1, 2, 3, 4], 10: [4, 1, 2, 3, 1, 2, 3, 4],
+  3: [3, 1, 2, 3, 4, 1, 2, 3], 8: [3, 4, 1, 2, 3, 1, 2, 3], 1: [2, 3, 1, 2, 3, 4, 1, 2], 6: [2, 3, 4, 1, 2, 3, 1, 2],
+};
+const LH_UP: Record<number, number[]> = {
+  0: [5, 4, 3, 2, 1, 3, 2, 1], 7: [5, 4, 3, 2, 1, 3, 2, 1], 2: [5, 4, 3, 2, 1, 3, 2, 1], 9: [5, 4, 3, 2, 1, 3, 2, 1],
+  4: [5, 4, 3, 2, 1, 3, 2, 1], 5: [5, 4, 3, 2, 1, 3, 2, 1], 11: [4, 3, 2, 1, 4, 3, 2, 1], 10: [3, 2, 1, 4, 3, 2, 1, 3],
+  3: [3, 2, 1, 4, 3, 2, 1, 3], 8: [3, 2, 1, 4, 3, 2, 1, 3], 1: [3, 2, 1, 4, 3, 2, 1, 3], 6: [4, 3, 2, 1, 3, 2, 1, 4],
+};
+
 /**
- * Dedilhado padrão de escala de 1 oitava (subida + descida, 15 notas).
- * Cobre as escalas da Fase 1: Dó, Sol, Ré, Lá, Mi (padrão de Dó) e Fá (polegar no Si♭).
+ * Dedilhado padrão de escala (subida + descida) em 1 ou 2 oitavas.
+ * Na 2ª oitava, a tônica do meio usa o dedo que começa a escala (direita) ou o que a termina (esquerda).
  */
-export function scaleFingering(tonic: number, mode: Mode, hand: Hand): number[] {
-  let up: number[];
-  if (hand === 'R') {
-    up = tonic === 5 && mode === 'maior' ? [1, 2, 3, 4, 1, 2, 3, 4] : [1, 2, 3, 1, 2, 3, 4, 5];
-  } else {
-    up = [5, 4, 3, 2, 1, 3, 2, 1];
-  }
-  const down = up.slice(0, -1).reverse();
-  return [...up, ...down];
+export function scaleFingering(tonic: number, _mode: Mode, hand: Hand, octaves = 1): number[] {
+  const up = (hand === 'R' ? RH_UP : LH_UP)[tonic] ?? (hand === 'R' ? RH_UP[0] : LH_UP[0]);
+  let seq = up;
+  if (octaves === 2) seq = [...up.slice(0, 7), hand === 'R' ? up[0] : up[7], ...up.slice(1)];
+  return [...seq, ...seq.slice(0, -1).reverse()];
 }
+
+/** Escala cromática de 1 oitava a partir do Dó: 3 nas pretas, 1 nas brancas, 2 onde há duas brancas seguidas. */
+export const CHROMATIC_R = [1, 3, 1, 3, 1, 2, 3, 1, 3, 1, 3, 1, 2];
+export const CHROMATIC_L = [1, 3, 1, 3, 2, 1, 3, 1, 3, 1, 3, 2, 1];
+
+export type Seventh = 'maj7' | 'm7' | '7' | 'm7b5';
+const SEVENTH: Record<Seventh, number[]> = { maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10], '7': [0, 4, 7, 10], m7b5: [0, 3, 6, 10] };
+export const seventhChord = (root: number, q: Seventh) => SEVENTH[q].map((i) => root + i);
+/** Qualidade da tétrade em cada grau da escala maior. */
+export const SEVENTH_DEGREES: Seventh[] = ['maj7', 'm7', 'm7', 'maj7', '7', 'm7', 'm7b5'];
 
 export const FIVE_FINGER_R = [1, 2, 3, 4, 5, 4, 3, 2, 1];
 export const FIVE_FINGER_L = [5, 4, 3, 2, 1, 2, 3, 4, 5];

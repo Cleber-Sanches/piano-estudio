@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { BookOpen, MessageCircle, Music, Piano, Route, Settings2, Sparkles, Sun } from 'lucide-react';
 import { EarGame, Jam } from './components/Games';
 import { Player } from './components/Player';
 import { input } from './engine/input';
@@ -12,6 +13,7 @@ import { KidGameRoute, Kids, Listen } from './pages/Kids';
 import { ProfilesPage } from './pages/Profiles';
 import { SettingsPage } from './pages/Settings';
 import { Songs, SongSetup } from './pages/Songs';
+import { Obra, Trail } from './pages/Trail';
 
 const Coach = lazy(() => import('./pages/Coach').then((m) => ({ default: m.Coach })));
 const Reading = lazy(() => import('./pages/Reading').then((m) => ({ default: m.Reading })));
@@ -109,6 +111,10 @@ export function App() {
     body = <Songs openSong={(id) => { setSong(null); go('/musica/' + id); }} />;
   } else if (section === 'coach') {
     body = <Suspense fallback={<p className="page muted">Carregando…</p>}><Coach /></Suspense>;
+  } else if (section === 'trilha' && !kid) {
+    body = <Trail />;
+  } else if (section === 'obra' && parts[1]) {
+    body = <Obra id={parts[1]} />;
   } else if (section === 'ajustes') {
     body = <SettingsPage />;
   } else if (section === 'perfis') {
@@ -127,26 +133,39 @@ export function App() {
     body = kid ? <Kids /> : <Home />;
   }
 
+  const items = [
+    { href: '#/', label: kid ? 'Brincar' : 'Hoje', Icon: kid ? Sparkles : Sun, on: section === '' },
+    ...(kid ? [] : [{ href: '#/trilha', label: 'Trilha', Icon: Route, on: section === 'trilha' || section === 'obra' }]),
+    ...(kid ? [] : [{ href: '#/leitura', label: 'Leitura', Icon: BookOpen, on: section === 'leitura' }]),
+    { href: '#/musicas', label: 'Músicas', Icon: Music, on: section === 'musicas' || section === 'musica' },
+    ...(kid ? [] : [{ href: '#/coach', label: 'Coach', Icon: MessageCircle, on: section === 'coach' }]),
+    { href: '#/ajustes', label: 'Ajustes', Icon: Settings2, on: section === 'ajustes' || section === 'perfis' },
+  ];
+
   return (
     <div className={'app' + (inPlayer ? ' app-player' : '')}>
       {!inPlayer && (
-        <header className="topbar">
-          <a className="brand" href="#/">
-            <span className="brand-keys" aria-hidden="true"><i /><i /><i /></span>
-            Piano Estúdio
+        <aside className="sidebar">
+          <a className="brand" href="#/" aria-label="Piano Estúdio, início">
+            <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
+            <span className="brand-name">Piano<br />Estúdio</span>
           </a>
-          <nav>
-            <a href="#/" aria-current={section === '' ? 'page' : undefined}>{kid ? 'Brincar' : 'Trilha'}</a>
-            {!kid && <a href="#/leitura" aria-current={section === 'leitura' ? 'page' : undefined}>Leitura</a>}
-            <a href="#/musicas" aria-current={section === 'musicas' ? 'page' : undefined}>Músicas</a>
-            {!kid && <a href="#/coach" aria-current={section === 'coach' ? 'page' : undefined}>Coach</a>}
-            <a href="#/ajustes" aria-current={section === 'ajustes' ? 'page' : undefined}>Ajustes</a>
+          <nav className="nav">
+            {items.map(({ href, label, Icon, on }) => (
+              <a key={href} href={href} aria-current={on ? 'page' : undefined}>
+                <Icon size={21} strokeWidth={on ? 2.2 : 1.8} aria-hidden="true" />
+                <span>{label}</span>
+              </a>
+            ))}
           </nav>
-          <span className={'midi-pill' + (devices ? ' on' : '')} title={devices ? 'Teclado MIDI conectado' : 'Nenhum teclado MIDI'}>
-            {devices ? 'Teclado conectado' : 'Sem teclado'}
-          </span>
-          <ProfileSwitcher />
-        </header>
+          <div className="sidebar-foot">
+            <span className={'midi-pill' + (devices ? ' on' : '')} title={devices ? 'Teclado MIDI conectado' : 'Nenhum teclado MIDI'}>
+              <Piano size={16} aria-hidden="true" />
+              <span>{devices ? 'Teclado conectado' : 'Sem teclado'}</span>
+            </span>
+            <ProfileSwitcher />
+          </div>
+        </aside>
       )}
       <main key={profile.id}>{body}</main>
     </div>

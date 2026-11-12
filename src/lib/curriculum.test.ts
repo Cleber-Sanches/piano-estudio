@@ -17,7 +17,7 @@ describe('trilha', () => {
     const ids = allMissions().filter((m) => m.kind === 'licao').map((m) => (m as { id: string }).id);
     expect([...ids].sort()).toEqual(LESSONS.map((l) => l.id).sort());
     for (const m of allMissions()) if (m.kind === 'jogo') expect(GAMES[m.id]).toBeTruthy();
-    expect(LEVELS.map((l) => l.n)).toEqual([1, 2, 3, 4, 5]);
+    expect(LEVELS.map((l) => l.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   });
 
   it('peças embutidas montam sem erro e as duas mãos terminam no mesmo compasso', () => {

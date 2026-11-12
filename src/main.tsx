@@ -4,6 +4,8 @@ import { App } from './App';
 import { input } from './engine/input';
 import { initAutoBackup } from './lib/backup';
 import { getSettings } from './lib/settings';
+import '@fontsource-variable/fraunces/opsz.css';
+import '@fontsource-variable/inter';
 import './styles.css';
 
 input.selectedId = getSettings().deviceId;
