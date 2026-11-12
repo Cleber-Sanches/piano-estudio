@@ -1,6 +1,7 @@
 import { Midi } from '@tonejs/midi';
 import { useEffect, useState } from 'react';
-import { BUILTIN_PIECES } from '../lib/pieces';
+import { BUILTIN_PIECES, COLLECTIONS } from '../lib/pieces';
+import { useActiveProfile } from '../lib/profiles';
 import { deleteSong, getSong, listSongs, newId, putSong, type StoredSong } from '../lib/library';
 import { guessHands, midiTracks, songFromMidi, type Song, type TrackHands, type TrackInfo } from '../lib/song';
 import { noteName } from '../lib/theory';
@@ -9,6 +10,9 @@ export function Songs({ openSong }: { openSong: (id: string) => void }) {
   const [songs, setSongs] = useState<StoredSong[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  const [level, setLevel] = useState<0 | 1 | 2 | 3>(0);
+  const kid = useActiveProfile().kind === 'crianca';
+  // criança vê só o que serve para ela (cantigas e clássicos fáceis); adulto vê tudo, do mais fácil ao mais difícil
 
   const refresh = () => listSongs().then((s) => setSongs(s.sort((a, b) => b.addedAt.localeCompare(a.addedAt)))).catch(() => setSongs([]));
   useEffect(() => { refresh(); }, []);
@@ -33,20 +37,38 @@ export function Songs({ openSong }: { openSong: (id: string) => void }) {
   return (
     <div className="page">
       <section className="card">
-        <h1>Repertório sugerido</h1>
-        <p className="muted">Peças escolhidas para o seu nível, prontas para tocar. Comece pelo nível 1 e use o modo espera com mãos separadas.</p>
-        <div className="song-list">
-          {BUILTIN_PIECES.map((pc) => (
-            <a key={pc.id} className="rep-row" href={'#/peca/' + pc.id}>
-              <span className={'rep-level l' + pc.level}>Nível {pc.level}</span>
-              <span className="rep-main">
-                <b>{pc.title}</b>
-                <span className="muted small">{pc.why}</span>
-              </span>
-              <span className="plan-go" aria-hidden="true">→</span>
-            </a>
+        <h1>Repertório</h1>
+        <p className="muted">{kid ? 'Cantigas com as cores das notas. Toque no modo espera: a música só anda quando a nota certa sai.' : 'Arranjos prontos, do mais fácil ao mais difícil. Use o modo espera com mãos separadas, depois o modo tempo.'}</p>
+        <div className="chips" role="group" aria-label="Filtrar por nível">
+          {([0, 1, 2, 3] as const).map((n) => (
+            <button key={n} className={'chip' + (level === n ? ' on' : '')} aria-pressed={level === n} onClick={() => setLevel(n)}>{n ? 'Nível ' + n : 'Todos'}</button>
           ))}
         </div>
+        {COLLECTIONS.map((c) => {
+          const items = BUILTIN_PIECES.filter((pc) => pc.collection === c.id && (!level || pc.level === level) && (!kid || pc.kids));
+          if (!items.length) return null;
+          return (
+            <div key={c.id} className="collection">
+              <h2>{c.title}</h2>
+              <p className="muted small">{c.intro}</p>
+              <div className="song-list">
+                {items.map((pc) => (
+                  <div key={pc.id} className="rep-row-wrap">
+                    <a className="rep-row" href={'#/peca/' + pc.id}>
+                      <span className={'rep-level l' + pc.level}>Nível {pc.level}</span>
+                      <span className="rep-main">
+                        <b>{pc.title}</b>
+                        <span className="muted small">{pc.why}</span>
+                      </span>
+                      <span className="plan-go" aria-hidden="true">→</span>
+                    </a>
+                    {pc.kids && <a className="btn small ghost" href={'#/ouvir/' + pc.id} aria-label={'Ouvir ' + pc.title}>Ouvir</a>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </section>
 
       <section className="card">

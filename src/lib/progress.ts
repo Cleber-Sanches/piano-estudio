@@ -1,12 +1,13 @@
 import { LESSONS, MODULES } from './lessons';
 import type { PassResult, PracticeMode } from '../engine/practice';
 import type { Hand } from './theory';
+import { activeProfile, storeKey, subscribeProfiles } from './profiles';
 
 // Progresso salvo no navegador (localStorage), com relatório para o check-in com o mentor.
 
 export interface Attempt {
   at: string; // ISO
-  kind: 'licao' | 'musica' | 'teste' | 'leitura';
+  kind: 'licao' | 'musica' | 'teste' | 'leitura' | 'jogo';
   id: string;
   title: string;
   mode: PracticeMode;
@@ -40,8 +41,17 @@ export interface ReadingProgress {
   best: Record<number, { accuracy: number; avgMs: number }>;
 }
 
+/** Jogos de ouvido, improviso e atividades de criança. */
+export interface GameProgress {
+  done: boolean;
+  best: number;
+  plays: number;
+  lastAt: string;
+}
+
 export interface Store {
   version: 1;
+  games: Record<string, GameProgress>;
   lessons: Record<string, LessonProgress>;
   attempts: Attempt[];
   /** Minutos tocando por dia (AAAA-MM-DD). */
@@ -49,21 +59,29 @@ export interface Store {
   reading: ReadingProgress;
 }
 
-const KEY = 'piano-estudio:v1';
+/** Cada perfil tem a própria chave de progresso. */
+const key = () => storeKey(activeProfile().id);
 /** Dias até a próxima revisão, por degrau. */
 export const REVIEW_INTERVALS = [1, 3, 7, 14, 30, 60];
 
 function empty(): Store {
-  return { version: 1, lessons: {}, attempts: [], minutes: {}, reading: { level: 1, best: {} } };
+  return { version: 1, games: {}, lessons: {}, attempts: [], minutes: {}, reading: { level: 1, best: {} } };
 }
 
 let cache: Store | null = null;
+let cacheKey = '';
 const listeners = new Set<() => void>();
 
+// Ao trocar de perfil, esquece o cache e avisa as telas.
+subscribeProfiles(() => {
+  if (key() !== cacheKey) { cache = null; listeners.forEach((l) => l()); }
+});
+
 export function load(): Store {
-  if (cache) return cache;
+  if (cache && cacheKey === key()) return cache;
+  cacheKey = key();
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(cacheKey);
     cache = raw ? { ...empty(), ...JSON.parse(raw) } : empty();
   } catch {
     cache = empty();
@@ -73,8 +91,9 @@ export function load(): Store {
 
 function save(s: Store) {
   cache = s;
+  cacheKey = key();
   try {
-    localStorage.setItem(KEY, JSON.stringify(s));
+    localStorage.setItem(cacheKey, JSON.stringify(s));
   } catch {
     /* sem espaço ou bloqueado: segue só na memória */
   }
@@ -192,6 +211,20 @@ export function recordReading(level: number, title: string, accuracy: number, av
   return { unlocked: unlocked && level < maxLevel };
 }
 
+/** Registra uma rodada de jogo (0–1). `passed` marca a missão como feita. */
+export function recordGame(id: string, title: string, score: number, passed: boolean) {
+  const s = load();
+  const prev = s.games[id];
+  const at = new Date().toISOString();
+  const games = { ...s.games, [id]: { done: !!prev?.done || passed, best: Math.max(prev?.best ?? 0, score), plays: (prev?.plays ?? 0) + 1, lastAt: at } };
+  const attempt: Attempt = {
+    at, kind: 'jogo', id, title, mode: 'espera', hands: ['R'], bpm: null, speed: 1, accuracy: score,
+    hits: 0, total: 0, wrong: 0, avgOffsetMs: 0, loop: null, troubleMeasures: [],
+  };
+  save({ ...s, games, attempts: [attempt, ...s.attempts].slice(0, 800) });
+  return games[id];
+}
+
 export function nextLessonId(s: Store = load()): string {
   return LESSONS.find((l) => !s.lessons[l.id]?.completed)?.id ?? LESSONS[LESSONS.length - 1].id;
 }
@@ -226,13 +259,15 @@ export function report(days = 7): string {
   const proxima = LESSONS.find((l) => l.id === nextLessonId(s));
   if (proxima) lines.push(`Próxima lição: ${proxima.title}`);
   const byItem = new Map<string, Attempt[]>();
-  atts.filter((a) => a.kind !== 'leitura').forEach((a) => byItem.set(a.kind + ':' + a.id, [...(byItem.get(a.kind + ':' + a.id) ?? []), a]));
+  atts.filter((a) => a.kind !== 'leitura' && a.kind !== 'jogo').forEach((a) => byItem.set(a.kind + ':' + a.id, [...(byItem.get(a.kind + ':' + a.id) ?? []), a]));
   const reads = atts.filter((a) => a.kind === 'leitura');
   lines.push(`Leitura relâmpago: nível liberado ${s.reading.level}; ${reads.length} rodada(s) no período`);
   if (reads.length) {
     const r = reads[0];
     lines.push(`  última: ${r.title} — ${pct(r.accuracy)} de acerto, ${(r.avgOffsetMs / 1000).toFixed(1)} s por nota`);
   }
+  const jogos = atts.filter((a) => a.kind === 'jogo');
+  if (jogos.length) lines.push(`Ouvido e improviso: ${[...new Set(jogos.map((a) => a.title))].join('; ')}`);
   const due = dueReviews(s);
   if (due.length) lines.push(`Revisões pendentes: ${due.map((id) => LESSONS.find((l) => l.id === id)!.title).join('; ')}`);
   const viaTeste = LESSONS.filter((l) => s.lessons[l.id]?.viaTeste);

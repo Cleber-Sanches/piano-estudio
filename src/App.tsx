@@ -1,10 +1,15 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { EarGame, Jam } from './components/Games';
 import { Player } from './components/Player';
 import { input } from './engine/input';
+import { GAMES } from './lib/curriculum';
 import { LESSONS, lessonById, MODULES } from './lib/lessons';
 import { BUILTIN_PIECES } from './lib/pieces';
+import { switchProfile, useActiveProfile, useProfiles } from './lib/profiles';
 import type { Song } from './lib/song';
 import { Home } from './pages/Home';
+import { KidGameRoute, Kids, Listen } from './pages/Kids';
+import { ProfilesPage } from './pages/Profiles';
 import { SettingsPage } from './pages/Settings';
 import { Songs, SongSetup } from './pages/Songs';
 
@@ -23,8 +28,38 @@ function useHash() {
 
 const go = (path: string) => { location.hash = path; };
 
+/** Bolinha com a inicial do perfil; abre a lista para trocar. */
+function ProfileSwitcher() {
+  const active = useActiveProfile();
+  const list = useProfiles();
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="profile-switch">
+      <button className="avatar" style={{ background: active.color }} onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={'Perfil: ' + active.name + '. Trocar perfil'}>
+        {active.name.slice(0, 1).toUpperCase()}
+      </button>
+      {open && (
+        <>
+          <div className="menu-backdrop" onClick={() => setOpen(false)} />
+          <div className="profile-menu" role="menu">
+            {list.map((p) => (
+              <button key={p.id} role="menuitem" className={p.id === active.id ? 'on' : ''} onClick={() => { switchProfile(p.id); setOpen(false); go('/'); }}>
+                <span className="avatar small" style={{ background: p.color }} aria-hidden="true">{p.name.slice(0, 1).toUpperCase()}</span>
+                {p.name} <span className="muted small">{p.kind === 'crianca' ? 'criança' : 'adulto'}</span>
+              </button>
+            ))}
+            <a role="menuitem" href="#/perfis" onClick={() => setOpen(false)}>Novo perfil / gerenciar</a>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function App() {
   const route = useHash();
+  const profile = useActiveProfile();
+  const kid = profile.kind === 'crianca';
   const [devices, setDevices] = useState(0);
   const [song, setSong] = useState<{ id: string; song: Song } | null>(null);
   useEffect(() => input.onDevices((d) => setDevices(d.length)), []);
@@ -76,8 +111,20 @@ export function App() {
     body = <Suspense fallback={<p className="page muted">Carregando…</p>}><Coach /></Suspense>;
   } else if (section === 'ajustes') {
     body = <SettingsPage />;
+  } else if (section === 'perfis') {
+    body = <ProfilesPage />;
+  } else if (section === 'ouvir' && parts[1]) {
+    body = <Listen key={parts[1]} id={parts[1]} onExit={() => go(kid ? '/' : '/musicas')} />;
+  } else if (section === 'jogo' && parts[1]) {
+    const g = GAMES[parts[1]];
+    const back = () => go('/');
+    body = g
+      ? g.type === 'eco'
+        ? <EarGame key={parts[1]} id={parts[1]} title={g.title} detail={g.detail} pool={g.pool} length={g.length} rounds={g.rounds} onExit={back} />
+        : <Jam key={parts[1]} id={parts[1]} title={g.title} detail={g.detail} pool={g.pool} backing={g.backing} seconds={g.seconds} onExit={back} />
+      : <KidGameRoute key={parts[1]} id={parts[1]} onExit={back} />;
   } else {
-    body = <Home />;
+    body = kid ? <Kids /> : <Home />;
   }
 
   return (
@@ -89,18 +136,19 @@ export function App() {
             Piano Estúdio
           </a>
           <nav>
-            <a href="#/" aria-current={section === '' ? 'page' : undefined}>Trilha</a>
-            <a href="#/leitura" aria-current={section === 'leitura' ? 'page' : undefined}>Leitura</a>
+            <a href="#/" aria-current={section === '' ? 'page' : undefined}>{kid ? 'Brincar' : 'Trilha'}</a>
+            {!kid && <a href="#/leitura" aria-current={section === 'leitura' ? 'page' : undefined}>Leitura</a>}
             <a href="#/musicas" aria-current={section === 'musicas' ? 'page' : undefined}>Músicas</a>
-            <a href="#/coach" aria-current={section === 'coach' ? 'page' : undefined}>Coach</a>
+            {!kid && <a href="#/coach" aria-current={section === 'coach' ? 'page' : undefined}>Coach</a>}
             <a href="#/ajustes" aria-current={section === 'ajustes' ? 'page' : undefined}>Ajustes</a>
           </nav>
           <span className={'midi-pill' + (devices ? ' on' : '')} title={devices ? 'Teclado MIDI conectado' : 'Nenhum teclado MIDI'}>
             {devices ? 'Teclado conectado' : 'Sem teclado'}
           </span>
+          <ProfileSwitcher />
         </header>
       )}
-      <main>{body}</main>
+      <main key={profile.id}>{body}</main>
     </div>
   );
 }

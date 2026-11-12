@@ -123,20 +123,97 @@ export function canon(bpm: number, hands: Hand[]): Song {
   return fixedTempoSong({ title: 'Cânone em Ré (Pachelbel)', bpm, key: 'D', notes });
 }
 
+const G3 = 55, A3 = 57;
+const both = (rh: Ev[], lh: Ev[], hands: Hand[]) => [...(hands.includes('R') ? line(rh, 'R') : []), ...(hands.includes('L') ? line(lh, 'L') : [])];
+
+/** Dó Ré Mi Fá (cantiga): só a direita, dedos 1-2-3-4. */
+export function doReMiFa(bpm: number, hands: Hand[]): Song {
+  const rh: Ev[] = [
+    [C4, 1, 1], [D4, 1, 2], [E4, 1, 3], [F4, 1, 4], [F4, 2, 4], [F4, 2, 4],
+    [C4, 1, 1], [D4, 1, 2], [C4, 1, 1], [D4, 1, 2], [D4, 2, 2], [D4, 2, 2],
+    [C4, 1, 1], [G4, 1, 5], [F4, 1, 4], [E4, 1, 3], [E4, 2, 3], [E4, 2, 3],
+    [C4, 1, 1], [D4, 1, 2], [E4, 1, 3], [F4, 1, 4], [F4, 2, 4], [F4, 2, 4],
+  ];
+  const lh: Ev[] = [[C3, 4, 1], [F2, 4, 4], [G2, 4, 3], [G2, 4, 3], [C3, 4, 1], [C3, 4, 1], [C3, 4, 1], [F2, 4, 4]];
+  return fixedTempoSong({ title: 'Dó Ré Mi Fá', bpm, key: 'C', notes: both(rh, lh, hands) });
+}
+
+/** Mary Had a Little Lamb: três notas (Mi, Ré, Dó) e o Sol. */
+export function maryLamb(bpm: number, hands: Hand[]): Song {
+  const rh: Ev[] = [
+    [E4, 1, 3], [D4, 1, 2], [C4, 1, 1], [D4, 1, 2], [E4, 1, 3], [E4, 1, 3], [E4, 2, 3],
+    [D4, 1, 2], [D4, 1, 2], [D4, 2, 2], [E4, 1, 3], [G4, 1, 5], [G4, 2, 5],
+    [E4, 1, 3], [D4, 1, 2], [C4, 1, 1], [D4, 1, 2], [E4, 1, 3], [E4, 1, 3], [E4, 1, 3], [E4, 1, 3],
+    [D4, 1, 2], [D4, 1, 2], [E4, 1, 3], [D4, 1, 2], [C4, 4, 1],
+  ];
+  const lh: Ev[] = [[C3, 4, 1], [C3, 4, 1], [G2, 4, 3], [C3, 4, 1], [C3, 4, 1], [C3, 4, 1], [G2, 4, 3], [C3, 4, 1]];
+  return fixedTempoSong({ title: 'Mary Had a Little Lamb', bpm, key: 'C', notes: both(rh, lh, hands) });
+}
+
+/** Frère Jacques (Frei Martinho): frases que se repetem duas vezes. */
+export function frereJacques(bpm: number, hands: Hand[]): Song {
+  const h = 0.5;
+  const a: Ev[] = [[C4, 1, 1], [D4, 1, 2], [E4, 1, 3], [C4, 1, 1]];
+  const b: Ev[] = [[E4, 1, 3], [F4, 1, 4], [G4, 2, 5]];
+  const c: Ev[] = [[G4, h, 5], [A4, h, 5], [G4, h, 5], [F4, h, 4], [E4, 1, 3], [C4, 1, 1]];
+  const d: Ev[] = [[C4, 1, 1], [G3, 1], [C4, 2, 1]];
+  const rh: Ev[] = [...a, ...a, ...b, ...b, ...c, ...c, ...d, ...d];
+  const lh: Ev[] = Array.from({ length: 8 }, () => [C3, 4, 1] as Ev);
+  return fixedTempoSong({ title: 'Frère Jacques (Frei Martinho)', bpm, key: 'C', notes: both(rh, lh, hands) });
+}
+
+/** Old MacDonald (Seu Lobato tinha um sítio), em Dó. */
+export function seuLobato(bpm: number, hands: Hand[]): Song {
+  // A mão sai da posição: sem números de dedo, escolha o que ficar confortável.
+  const a: Ev[] = [[C4, 1], [C4, 1], [C4, 1], [G3, 1], [A3, 1], [A3, 1], [G3, 2]];
+  const b: Ev[] = [[E4, 1], [E4, 1], [D4, 1], [D4, 1]];
+  const rh: Ev[] = [...a, ...b, [C4, 3], [G3, 1], ...a, ...b, [C4, 4]];
+  const l: Ev[] = [[C3, 4, 1], [F2, 2, 4], [C3, 2, 1], [C3, 2, 1], [G2, 2, 3], [C3, 4, 1]];
+  const lh: Ev[] = [...l, ...l];
+  return fixedTempoSong({ title: 'Seu Lobato (Old MacDonald)', bpm, key: 'C', notes: both(rh, lh, hands) });
+}
+
+/** Hot Cross Buns: a primeira música de muitos métodos, só três notas. */
+export function hotCrossBuns(bpm: number, hands: Hand[]): Song {
+  const h = 0.5;
+  const a: Ev[] = [[E4, 1, 3], [D4, 1, 2], [C4, 2, 1]];
+  const rh: Ev[] = [...a, ...a, [C4, h, 1], [C4, h, 1], [C4, h, 1], [C4, h, 1], [D4, h, 2], [D4, h, 2], [D4, h, 2], [D4, h, 2], ...a];
+  const lh: Ev[] = [[C3, 4, 1], [C3, 4, 1], [G2, 4, 3], [C3, 4, 1]];
+  return fixedTempoSong({ title: 'Hot Cross Buns', bpm, key: 'C', notes: both(rh, lh, hands) });
+}
+
+export type Collection = 'cantigas' | 'classicos' | 'datas';
+
+export const COLLECTIONS: { id: Collection; title: string; intro: string }[] = [
+  { id: 'cantigas', title: 'Cantigas e infantis', intro: 'Melodias curtas e famosas. Boas para começar e para tocar e cantar junto com criança.' },
+  { id: 'classicos', title: 'Clássicos', intro: 'Peças de compositores, em arranjo simples. Domínio público.' },
+  { id: 'datas', title: 'Datas e festas', intro: 'Para tocar em aniversário e no Natal.' },
+];
+
 export interface BuiltinPiece {
   id: string;
   title: string;
   level: 1 | 2 | 3;
   bpm: number;
   why: string;
+  collection: Collection;
+  /** Serve para o perfil de criança (siga as cores). */
+  kids?: boolean;
   build: (bpm: number, hands: Hand[]) => Song;
 }
 
 export const BUILTIN_PIECES: BuiltinPiece[] = [
-  { id: 'brilha', title: 'Brilha, Brilha, Estrelinha', level: 1, bpm: 100, why: 'Melodia em notas iguais e baixo simples. A primeira peça com as duas mãos.', build: brilhaBrilha },
-  { id: 'parabens', title: 'Parabéns pra Você', level: 1, bpm: 100, why: 'Compasso 3/4 e anacruse. Útil de verdade: você vai tocar em aniversários.', build: parabens },
-  { id: 'ode', title: 'Ode à Alegria (Beethoven)', level: 1, bpm: 100, why: 'Posição fixa de cinco dedos e o primeiro ritmo pontuado.', build: odeAlegria },
-  { id: 'jingle', title: 'Jingle Bells (refrão)', level: 2, bpm: 110, why: 'Melodia com baixo de Dó, Fá e Sol: o campo harmônico na prática.', build: jingleBells },
-  { id: 'canon', title: 'Cânone em Ré (Pachelbel)', level: 2, bpm: 70, why: 'A progressão mais famosa da música, em Ré maior com Fá♯ e Dó♯. Primeiro os acordes, depois a melodia.', build: canon },
-  { id: 'elise', title: 'Für Elise, parte A (Beethoven)', level: 3, bpm: 70, why: 'Semicolcheias, mãos alternadas e acidentes. O desafio clássico do iniciante.', build: furElise },
+  { id: 'hotcross', title: 'Hot Cross Buns', level: 1, bpm: 90, collection: 'cantigas', kids: true, why: 'Só três notas: Mi, Ré, Dó. A primeira música de muitos métodos.', build: hotCrossBuns },
+  { id: 'mary', title: 'Mary Had a Little Lamb', level: 1, bpm: 100, collection: 'cantigas', kids: true, why: 'Quatro notas e frases que se repetem. Ótima para cantar junto.', build: maryLamb },
+  { id: 'doremifa', title: 'Dó Ré Mi Fá', level: 1, bpm: 100, collection: 'cantigas', kids: true, why: 'Cantiga que ensina os nomes das notas enquanto toca.', build: doReMiFa },
+  { id: 'frere', title: 'Frère Jacques (Frei Martinho)', level: 1, bpm: 100, collection: 'cantigas', kids: true, why: 'Cada frase vem duas vezes: fácil de decorar. Também dá para cantar em cânone.', build: frereJacques },
+  { id: 'lobato', title: 'Seu Lobato (Old MacDonald)', level: 1, bpm: 110, collection: 'cantigas', kids: true, why: 'A mão desce até o Sol grave: primeiro movimento fora da posição.', build: seuLobato },
+  { id: 'brilha', title: 'Brilha, Brilha, Estrelinha', level: 1, bpm: 100, collection: 'cantigas', kids: true, why: 'Melodia em notas iguais e baixo simples. A primeira peça com as duas mãos.', build: brilhaBrilha },
+  { id: 'parabens', title: 'Parabéns pra Você', level: 1, bpm: 100, collection: 'datas', why: 'Compasso 3/4 e anacruse. Útil de verdade: você vai tocar em aniversários.', build: parabens },
+  { id: 'ode', title: 'Ode à Alegria (Beethoven)', level: 1, bpm: 100, collection: 'classicos', kids: true, why: 'Posição fixa de cinco dedos e o primeiro ritmo pontuado.', build: odeAlegria },
+  { id: 'jingle', title: 'Jingle Bells (refrão)', level: 2, bpm: 110, collection: 'datas', why: 'Melodia com baixo de Dó, Fá e Sol: o campo harmônico na prática.', build: jingleBells },
+  { id: 'canon', title: 'Cânone em Ré (Pachelbel)', level: 2, bpm: 70, collection: 'classicos', why: 'A progressão mais famosa da música, em Ré maior com Fá♯ e Dó♯. Primeiro os acordes, depois a melodia.', build: canon },
+  { id: 'elise', title: 'Für Elise, parte A (Beethoven)', level: 3, bpm: 70, collection: 'classicos', why: 'Semicolcheias, mãos alternadas e acidentes. O desafio clássico do iniciante.', build: furElise },
 ];
+
+export const pieceById = (id: string) => BUILTIN_PIECES.find((p) => p.id === id);

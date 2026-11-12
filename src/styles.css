@@ -266,3 +266,87 @@ a.lesson { text-decoration: none; }
 .calib-ball::after { content: ""; position: absolute; left: 0; bottom: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--brass); }
 .calib-line { position: absolute; left: 0; right: 0; bottom: 22px; height: 3px; background: var(--ink); opacity: 0.6; }
 .calib-flash { position: absolute; inset: 0; background: var(--brass-soft); opacity: 0; pointer-events: none; transition: opacity 60ms; mix-blend-mode: multiply; }
+
+/* ---------- perfis ---------- */
+.profile-switch { position: relative; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; border: 0; color: #fff; font: 700 15px var(--f-body); display: inline-grid; place-items: center; flex: none; cursor: pointer; }
+.avatar.small { width: 24px; height: 24px; font-size: 12px; }
+.menu-backdrop { position: fixed; inset: 0; z-index: 20; }
+.profile-menu { position: absolute; right: 0; top: 42px; z-index: 21; min-width: 220px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 6px; display: flex; flex-direction: column; box-shadow: 0 8px 24px rgb(0 0 0 / 0.12); }
+.profile-menu button, .profile-menu a { display: flex; align-items: center; gap: 10px; padding: 10px; border: 0; background: none; color: var(--ink); font: 500 15px var(--f-body); border-radius: 8px; text-decoration: none; cursor: pointer; text-align: left; }
+.profile-menu .on { background: var(--brass-soft); }
+.profile-menu a { color: var(--brass); border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; margin-top: 4px; }
+.profile-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.profile-row:first-child { border-top: 0; }
+.profile-row .actions { margin-left: auto; }
+.profile-form { display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 8px 0; }
+.profile-form label, .field-label { font-weight: 600; font-size: 14px; }
+.profile-form input { font: 16px var(--f-body); padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 320px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 500 14px var(--f-body); padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+.chip.on { background: var(--brass-soft); border-color: var(--brass); }
+.swatch { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
+.swatch.on { border-color: var(--ink); }
+
+/* ---------- trilha ---------- */
+.pillars { display: grid; gap: 10px; }
+.pillar { display: grid; grid-template-columns: 110px 1fr 48px; align-items: center; gap: 10px; }
+.pillar-name { font-weight: 600; font-size: 14px; }
+.meter { display: block; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--brass); border-radius: 99px; transition: width 0.3s; }
+.unit { display: flex; flex-direction: column; gap: 6px; }
+.unit h3 { margin: 6px 0 0; font-size: 16px; }
+.lesson.p-ouvido .lesson-dot { border-style: dashed; }
+.lesson.p-criar .lesson-dot { border-radius: 3px; }
+.module.roadmap { opacity: 0.7; padding: 14px 16px; border: 1px dashed var(--line); border-radius: 14px; }
+.module.roadmap h2 { margin: 0; }
+
+/* ---------- músicas ---------- */
+.collection { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.collection h2 { margin: 0; }
+.rep-row-wrap { display: flex; align-items: center; gap: 8px; }
+.rep-row-wrap .rep-row { flex: 1; min-width: 0; }
+
+/* ---------- jogos ---------- */
+.game-card { display: flex; flex-direction: column; gap: 12px; }
+.game-status { display: flex; justify-content: space-between; color: var(--muted); font-size: 14px; }
+.game-msg { font: 700 24px var(--f-display); text-align: center; padding: 10px; border-radius: 12px; background: var(--bg); }
+.game-msg.certo { color: var(--good); }
+.game-msg.errado { color: var(--warn); }
+.dots { display: flex; justify-content: center; gap: 8px; }
+.dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--line); }
+.dots i.on { background: var(--good); }
+.mini-keys { position: relative; display: flex; height: 110px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); user-select: none; touch-action: manipulation; }
+.mini-keys.big { height: 170px; }
+.mk-white { flex: 1; border: 0; border-right: 1px solid var(--line); background: #fff; cursor: pointer; padding: 0; }
+.mk-black { position: absolute; top: 0; height: 60%; border: 0; background: #17171B; border-radius: 0 0 4px 4px; cursor: pointer; padding: 0; z-index: 1; }
+.bubbles { position: relative; height: 180px; border-radius: 12px; background: var(--bg); overflow: hidden; }
+.bubbles.big { height: 260px; }
+.bubble { position: absolute; bottom: 10px; border-radius: 50%; transform: translateX(-50%); animation: bubble-up 1.6s ease-out forwards; opacity: 0.85; }
+@keyframes bubble-up { to { transform: translate(-50%, -150px) scale(1.3); opacity: 0; } }
+
+/* ---------- criança ---------- */
+.kid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+.kid-card { display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: var(--ink); }
+.kid-card:hover { border-color: var(--brass); }
+.kid-card.done { border-color: var(--good); }
+.kid-emoji { font-size: 40px; line-height: 1; }
+.kid-adult { font-size: 13px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 6px; margin-top: auto; }
+.kid-stage-head { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: 0; padding: 0; font: 16px var(--f-body); color: var(--ink); cursor: pointer; text-align: left; }
+.kid-stage-head .plan-go { margin-left: auto; }
+.kid-prompt { font-size: 96px; text-align: center; line-height: 1.1; }
+.page.kid .game-msg { font-size: 30px; }
+.rhythm-row { display: flex; gap: 6px; font-size: 34px; }
+.rhythm-dot { display: block; text-align: left; opacity: 0.35; transition: opacity 0.1s, transform 0.1s; }
+.rhythm-dot.on, .rhythm-dot.tap { opacity: 1; transform: scale(1.15); }
+.listen-note { align-self: center; width: 150px; height: 150px; border-radius: 50%; display: grid; place-items: center; color: #fff; font: 700 36px var(--f-display); transition: background 0.15s; }
+.kid-picks { display: flex; flex-wrap: wrap; gap: 8px; }
+
+@media (prefers-color-scheme: dark) {
+  .mk-white { background: #E8E6E0; }
+  .mk-black { background: #000; }
+}
+@media (max-width: 640px) {
+  .pillar { grid-template-columns: 90px 1fr 40px; }
+  .topbar nav a { padding: 6px 8px; }
+}

@@ -6,6 +6,7 @@ import { isNativeApp } from '../engine/input';
 import { listSongs, putSong, subscribeLibrary, type StoredSong } from './library';
 import { subscribe as subscribeProgress } from './progress';
 import { subscribeSettings } from './settings';
+import { allStoreKeys, PROFILES_KEY, subscribeProfiles } from './profiles';
 
 interface NativeBackup {
   pickFolder(): Promise<{ name?: string; cancelled?: boolean }>;
@@ -16,7 +17,9 @@ interface NativeBackup {
 
 const Native = registerPlugin<NativeBackup>('Backup');
 
-const KEYS = ['piano-estudio:v1', 'piano-estudio:ajustes'];
+/** Perfis, progresso de cada perfil e ajustes. */
+const keys = () => [PROFILES_KEY, ...allStoreKeys(), 'piano-estudio:ajustes'];
+const restorable = (k: string) => k === PROFILES_KEY || k === 'piano-estudio:ajustes' || k === 'piano-estudio:v1' || k.startsWith('piano-estudio:v1:');
 /** Só gravamos sozinhos depois que este aparelho fez um backup ou uma restauração (evita apagar um backup bom com dados vazios). */
 const READY_KEY = 'piano-estudio:backup-ativo';
 const LAST_KEY = 'piano-estudio:backup-ultimo';
@@ -51,7 +54,7 @@ async function buildBackup(): Promise<string> {
     app: 'piano-estudio',
     version: 1,
     savedAt: new Date().toISOString(),
-    storage: Object.fromEntries(KEYS.map((k) => [k, localStorage.getItem(k)])),
+    storage: Object.fromEntries(keys().map((k) => [k, localStorage.getItem(k)])),
     songs: songs.map((s) => ({ ...s, data: toBase64(s.data) })),
   };
   return JSON.stringify(file);
@@ -95,7 +98,7 @@ export async function restoreNow(): Promise<boolean> {
   if (!f) return false;
   restoring = true;
   for (const [k, v] of Object.entries(f.storage)) {
-    if (!KEYS.includes(k)) continue;
+    if (!restorable(k)) continue;
     if (v === null) localStorage.removeItem(k);
     else localStorage.setItem(k, v);
   }
@@ -138,6 +141,7 @@ export function initAutoBackup() {
   subscribeProgress(schedule);
   subscribeSettings(schedule);
   subscribeLibrary(schedule);
+  subscribeProfiles(schedule);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flush();
   });
