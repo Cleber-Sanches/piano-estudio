@@ -639,3 +639,50 @@ main { min-width: 0; }
   .path::before { left: 33px; }
 }
 @media (prefers-reduced-motion: reduce) { .node.atual .node-dot { animation: none; } * { transition: none !important; } }
+
+/* ---------- Sessão com o professor ---------- */
+.center { text-align: center; justify-content: center; }
+.m-entry { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--brass); background: var(--brass-soft); color: var(--ink); text-decoration: none; }
+.m-entry:hover { filter: brightness(1.04); }
+.m-entry:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.m-entry-icon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--brass); color: var(--surface); flex: none; }
+.m-entry-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.m-entry-text span { font-size: 14px; color: var(--muted); }
+.hero-play { width: 72px; height: 72px; border-radius: 50%; border: 0; background: var(--brass); color: var(--surface); display: grid; place-items: center; cursor: pointer; flex: none; box-shadow: 0 6px 20px color-mix(in srgb, var(--brass) 35%, transparent); }
+.hero-play:hover { filter: brightness(1.08); }
+.hero-play:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+.m-phrases { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.m-phrases span { width: 26px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.m-phrases i { display: block; height: 100%; width: calc(var(--f) * 100%); background: var(--brass); }
+.m-songs { display: flex; flex-wrap: wrap; gap: 8px; }
+.m-song { display: inline-flex; align-items: center; gap: 5px; font: 14px var(--f-body); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+.m-song.on { border-color: var(--brass); background: var(--brass-soft); }
+.m-diag, .m-gains { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.m-diag li { display: grid; grid-template-columns: 1fr 90px; gap: 10px; align-items: center; }
+.m-diag li.muted { display: block; }
+.m-gains li { display: grid; grid-template-columns: auto 1fr 110px 40px; gap: 10px; align-items: center; }
+.m-gains svg { color: var(--good, var(--brass)); }
+.m-top { display: flex; align-items: center; gap: 12px; }
+.m-time { flex: 1; }
+.m-card { gap: 16px; }
+.m-kind { display: flex; align-items: center; gap: 6px; margin: 0; }
+.m-why { margin: 0; color: var(--muted); font-size: 14px; }
+.m-cue { font-size: 22px; font-weight: 600; text-align: center; padding: 6px 0; }
+.m-cue.ouvir { color: var(--muted); }
+.m-cue.quase { color: var(--warn, var(--danger)); }
+.m-dots { justify-content: center; }
+.m-staff { display: grid; place-items: center; min-height: 140px; }
+.m-hint { text-align: center; margin: 0; min-height: 1.4em; }
+.m-rhythm { display: flex; gap: 6px; height: 46px; }
+.m-rhythm span { display: flex; border-radius: 8px; border: 1px solid var(--line); padding: 5px; transition: background .12s; }
+.m-rhythm span i { flex: 1; border-radius: 4px; background: var(--line); }
+.m-rhythm span.on i { background: var(--brass); }
+.m-notes { display: flex; gap: 6px; flex-wrap: wrap; }
+.m-note { min-width: 44px; padding: 10px 6px; text-align: center; border-radius: 10px; border: 1px solid var(--line); font-weight: 600; font-size: 15px; color: var(--ink); border-bottom: 3px solid var(--nc); transition: opacity .15s, background .15s; }
+.m-note.now { background: color-mix(in srgb, var(--nc) 22%, transparent); border-color: var(--nc); }
+.m-note.done { opacity: .4; }
+.m-result { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 0; text-align: center; }
+.m-score { font-size: 44px; font-weight: 700; }
+.m-result.ok .m-score { color: var(--good, var(--brass)); }
+.m-result.meio .m-score { color: var(--brass); }
+.m-result.baixo .m-score { color: var(--muted); }

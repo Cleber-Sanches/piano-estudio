@@ -50,7 +50,7 @@ function clefFor(level: Level, midi: number): 'treble' | 'bass' {
   return midi >= 60 ? 'treble' : 'bass';
 }
 
-function NoteView({ midi, flat, clef, state }: { midi: number; flat: boolean; clef: 'treble' | 'bass'; state: 'neutro' | 'certo' | 'errado' }) {
+export function NoteView({ midi, flat, clef, state }: { midi: number; flat: boolean; clef: 'treble' | 'bass'; state: 'neutro' | 'certo' | 'errado' }) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = host.current!;

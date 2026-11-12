@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { ArrowRight, CalendarDays, Check, ChevronRight, Clock, Copy, FileText, Flame, Heart, Play, RotateCcw, Target, type LucideIcon } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, ChevronRight, Clock, Copy, FileText, Flame, Heart, Play, RotateCcw, Sparkles, Target, type LucideIcon } from 'lucide-react';
 import { allMissions, currentLevel, levelDone, missionDone, missionHref, missionKey, missionPillar, missionTitle, PHASES, pillarProgress, PILLARS, type Mission } from '../lib/curriculum';
 import { listSongs, type StoredSong } from '../lib/library';
 import { PILLAR_ICON } from '../lib/icons';
@@ -141,6 +141,14 @@ export function Home() {
 
       <div className="home-grid">
         <div className="home-main">
+          <a className="m-entry" href="#/sessao">
+            <span className="m-entry-icon" aria-hidden="true"><Sparkles size={22} /></span>
+            <span className="m-entry-text">
+              <b>Sessão com o professor</b>
+              <span>10 minutos. Ele vê onde você erra e monta cada exercício na hora.</span>
+            </span>
+            <ChevronRight size={20} aria-hidden="true" />
+          </a>
           <section className="hero">
             <div className="hero-text">
               <p className="hero-eyebrow">Fase {phase.n} · {phase.title}<span className="hero-dot" />Nível {level.n} de 12</p>

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { BookOpen, MessageCircle, Music, Piano, Route, Settings2, Sparkles, Sun } from 'lucide-react';
+import { BookOpen, GraduationCap, MessageCircle, Music, Piano, Route, Settings2, Sparkles, Sun } from 'lucide-react';
 import { EarGame, Jam } from './components/Games';
 import { Player } from './components/Player';
 import { input } from './engine/input';
@@ -16,6 +16,7 @@ import { Songs, SongSetup } from './pages/Songs';
 import { Obra, Trail } from './pages/Trail';
 
 const Coach = lazy(() => import('./pages/Coach').then((m) => ({ default: m.Coach })));
+const Mestre = lazy(() => import('./pages/Mestre').then((m) => ({ default: m.Mestre })));
 const Reading = lazy(() => import('./pages/Reading').then((m) => ({ default: m.Reading })));
 
 function useHash() {
@@ -101,6 +102,8 @@ export function App() {
     body = builtin
       ? <Player key={'peca-' + builtin.pc.id} kind="musica" id={'peca-' + builtin.pc.id} song={builtin.song} onExit={() => go('/musicas')} />
       : <p className="page">Peça não encontrada.</p>;
+  } else if (section === 'sessao' && !kid) {
+    body = <Suspense fallback={<p className="page muted">Carregando…</p>}><Mestre /></Suspense>;
   } else if (section === 'leitura') {
     body = <Suspense fallback={<p className="page muted">Carregando…</p>}><Reading /></Suspense>;
   } else if (section === 'musica' && parts[1]) {
@@ -135,6 +138,7 @@ export function App() {
 
   const items = [
     { href: '#/', label: kid ? 'Brincar' : 'Hoje', Icon: kid ? Sparkles : Sun, on: section === '' },
+    ...(kid ? [] : [{ href: '#/sessao', label: 'Professor', Icon: GraduationCap, on: section === 'sessao' }]),
     ...(kid ? [] : [{ href: '#/trilha', label: 'Trilha', Icon: Route, on: section === 'trilha' || section === 'obra' }]),
     ...(kid ? [] : [{ href: '#/leitura', label: 'Leitura', Icon: BookOpen, on: section === 'leitura' }]),
     { href: '#/musicas', label: 'Músicas', Icon: Music, on: section === 'musicas' || section === 'musica' },
